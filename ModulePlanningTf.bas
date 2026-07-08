@@ -23,14 +23,12 @@ Option Explicit
 '
 ' 3. Repos hebdomadaire : 2 jours OFF par semaine.
 '      - Dimanche : OFF fixe pour tout le monde.
-'      - 1 jour OFF supplementaire, pris uniquement le LUNDI ou le MARDI (jamais
-'        du mercredi au samedi), et qui tourne lui aussi chaque semaine entre le
-'        lundi et le mardi selon l'agent, afin de repartir equitablement les repos
-'        dans le temps.
-'    Cette regle garantit qu'aucun agent (hors conge/maladie/contrat) n'est OFF
-'    du mercredi au samedi, ce qui permet de viser une moyenne de 7 personnes
-'    presentes par jour sur cette periode (a ajuster selon l'effectif reel du
-'    projet dans AffecterEquipeEtRepos / le message de fin de macro).
+'      - 1 jour OFF supplementaire, pris UNIQUEMENT entre MERCREDI et SAMEDI
+'        (jamais le lundi ni le mardi, qui restent toujours travailles), et qui
+'        tourne chaque semaine (Mercredi/Jeudi/Vendredi/Samedi) selon l'agent,
+'        afin de repartir equitablement les repos dans le temps et d'obtenir une
+'        moyenne visee d'environ 7 personnes presentes par jour sur la periode
+'        mercredi-samedi (a ajuster selon l'effectif reel du projet).
 '
 ' 4. Conge actif pour un jour donne si colonne "Conge" est renseignee et differente
 '    de "NON", ET que le jour est compris entre "Conge D" et "Conge F".
@@ -47,9 +45,11 @@ Option Explicit
 '      - Si "Date de sortie" renseignee et <= jour -> OFF, "Contrat termine"
 '      - Si "Type de contrat" = "Termine" ou "Sorti" -> OFF, "Contrat termine"
 '
-' 8. Pause dejeuner fixe de 1h, deduite du total d'heures planifiees :
-'      - Equipe A (8h-18h)  : pause 13h-14h
-'      - Equipe B (10h-20h) : pause 14h-15h
+' 8. Pause dejeuner fixe de 1h, deduite du total d'heures planifiees, choisie
+'    parmi 4 creneaux possibles (12h-13h / 13h-14h / 14h-15h / 15h-16h) pour
+'    etaler les pauses au sein d'une meme equipe :
+'      - Equipe A (8h-18h)  : pause 12h-13h ou 13h-14h (alterne selon l'agent)
+'      - Equipe B (10h-20h) : pause 14h-15h ou 15h-16h (alterne selon l'agent)
 '
 ' Priorite des regles (du + fort au + faible) : Contrat > Maladie > Conge > Repos
 ' hebdomadaire (dimanche + jour tournant) > Horaire equipe A/B par defaut,
@@ -168,15 +168,17 @@ End Sub
 ' Determine, pour un agent donne (position 0-based "pos" dans la liste
 ' filtree, effectif total "total", et nombre de places en equipe A
 ' "nEquipeA"), sur quelle equipe (A = 8h-18h / B = 10h-20h) il se trouve
-' CETTE semaine, ainsi que son jour de repos tournant (Lundi ou Mardi).
+' CETTE semaine, son jour de repos tournant (entre Mercredi et Samedi),
+' et son creneau de pause dejeuner (parmi 4 creneaux possibles, pour
+' etaler les pauses au sein d'une meme equipe).
 ' La rotation est basee sur le numero de semaine ISO ("weekNum") de sorte
-' que ce ne soit pas toujours les memes agents sur le meme horaire ou le
-' meme jour de repos d'une semaine a l'autre.
+' que ce ne soit pas toujours les memes agents sur le meme horaire, le
+' meme jour de repos ou le meme creneau de pause d'une semaine a l'autre.
 '--------------------------------------------------------------------
 Sub AffecterEquipeEtRepos(ByVal pos As Long, ByVal total As Long, ByVal nEquipeA As Long, _
                           ByVal weekNum As Long, ByRef entreeH As Integer, _
                           ByRef sortieH As Integer, ByRef equipeLabel As String, _
-                          ByRef jourRepoTournant As Integer)
+                          ByRef jourRepoTournant As Integer, ByRef pauseLabel As String)
 
     Dim posRotatif As Long
     If total <= 0 Then total = 1
@@ -184,17 +186,30 @@ Sub AffecterEquipeEtRepos(ByVal pos As Long, ByVal total As Long, ByVal nEquipeA
 
     If posRotatif < nEquipeA Then
         entreeH = 8: sortieH = 18: equipeLabel = "8h-18h"
+        ' Equipe A : pause 12h-13h ou 13h-14h (alterne selon l'agent/la semaine)
+        If (pos + weekNum) Mod 2 = 0 Then
+            pauseLabel = "12h-13h"
+        Else
+            pauseLabel = "13h-14h"
+        End If
     Else
         entreeH = 10: sortieH = 20: equipeLabel = "10h-20h"
+        ' Equipe B : pause 14h-15h ou 15h-16h (alterne selon l'agent/la semaine)
+        If (pos + weekNum) Mod 2 = 0 Then
+            pauseLabel = "14h-15h"
+        Else
+            pauseLabel = "15h-16h"
+        End If
     End If
 
-    ' Jour de repos tournant : Lundi (dayIndex=1) ou Mardi (dayIndex=2) uniquement,
-    ' jamais du mercredi au samedi, pour proteger l'effectif sur cette periode.
-    If (pos + weekNum) Mod 2 = 0 Then
-        jourRepoTournant = 1 ' Lundi
-    Else
-        jourRepoTournant = 2 ' Mardi
-    End If
+    ' Jour de repos tournant : UNIQUEMENT entre Mercredi (dayIndex=3) et Samedi
+    ' (dayIndex=6). Lundi et Mardi restent toujours travailles.
+    Select Case (pos + weekNum) Mod 4
+        Case 0: jourRepoTournant = 3 ' Mercredi
+        Case 1: jourRepoTournant = 4 ' Jeudi
+        Case 2: jourRepoTournant = 5 ' Vendredi
+        Case Else: jourRepoTournant = 6 ' Samedi
+    End Select
 
 End Sub
 
@@ -221,11 +236,11 @@ Function ProcessRow(wsBDD As Worksheet, wsPlan As Worksheet, headers As Object, 
     wsPlan.Cells(outRow, 1).Font.Bold = True
     wsPlan.Cells(outRow, 2).Font.Bold = True
 
-    ' Equipe et jour de repos tournant pour cette semaine
+    ' Equipe, jour de repos tournant et creneau de pause pour cette semaine
     Dim entreeDefaut As Integer, sortieDefaut As Integer, equipeLabel As String
-    Dim jourRepoTournant As Integer
+    Dim jourRepoTournant As Integer, pauseLabel As String
     AffecterEquipeEtRepos pos, total, nEquipeA, weekNum, entreeDefaut, sortieDefaut, _
-                           equipeLabel, jourRepoTournant
+                           equipeLabel, jourRepoTournant, pauseLabel
 
     Dim offCount As Long, totalHeures As Double
     Dim comments As Object
@@ -291,15 +306,18 @@ Function ProcessRow(wsBDD As Worksheet, wsPlan As Worksheet, headers As Object, 
     ' Equipe (8h-18h / 10h-20h) affectee cette semaine
     wsPlan.Cells(outRow, 20).Value = equipeLabel
     wsPlan.Cells(outRow, 20).HorizontalAlignment = xlCenter
+    ' Creneau de pause dejeuner affecte cette semaine
+    wsPlan.Cells(outRow, 21).Value = pauseLabel
+    wsPlan.Cells(outRow, 21).HorizontalAlignment = xlCenter
     ' Commentaires
     If comments.Count = 0 Then
-        wsPlan.Cells(outRow, 21).Value = "RAS"
+        wsPlan.Cells(outRow, 22).Value = "RAS"
     Else
         Dim k As Variant, txt As String
         For Each k In comments.Keys
             txt = txt & IIf(txt = "", "", " / ") & k
         Next k
-        wsPlan.Cells(outRow, 21).Value = txt
+        wsPlan.Cells(outRow, 22).Value = txt
     End If
 
     ProcessRow = outRow + 1
@@ -524,9 +542,10 @@ Function WriteSectionHeader(wsPlan As Worksheet, startRow As Long, weekStart As 
     wsPlan.Cells(r2, 18).Value = "NB heures planifiees"
     wsPlan.Cells(r2, 19).Value = "TT"
     wsPlan.Cells(r2, 20).Value = "Equipe"
-    wsPlan.Cells(r2, 21).Value = "Commentaires"
+    wsPlan.Cells(r2, 21).Value = "Pause dejeuner"
+    wsPlan.Cells(r2, 22).Value = "Commentaires"
 
-    With wsPlan.Range(wsPlan.Cells(r2, 1), wsPlan.Cells(r2, 21))
+    With wsPlan.Range(wsPlan.Cells(r2, 1), wsPlan.Cells(r2, 22))
         .Interior.Color = RGB(217, 226, 243)
         .Font.Bold = True
         .HorizontalAlignment = xlCenter
@@ -536,45 +555,71 @@ Function WriteSectionHeader(wsPlan As Worksheet, startRow As Long, weekStart As 
 End Function
 
 '--------------------------------------------------------------------
-' Petit tableau de reference Equipes / Pause dejeuner
+' Petit tableau de reference Equipes / Creneaux de pause dejeuner
 '--------------------------------------------------------------------
 Sub WriteShiftReferenceTable(wsPlan As Worksheet, atRow As Long)
     With wsPlan
+
+        ' --- Bloc 1 : Equipes (horaires) ---------------------------------
         .Cells(atRow, 1).Value = "Reference equipes :"
         .Cells(atRow, 1).Font.Bold = True
 
         .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 2)).Merge
         .Cells(atRow + 1, 1).Value = "Equipe"
-        .Range(.Cells(atRow + 1, 3), .Cells(atRow + 1, 4)).Merge
-        .Cells(atRow + 1, 3).Value = "Shift"
-        .Range(.Cells(atRow + 1, 5), .Cells(atRow + 1, 6)).Merge
-        .Cells(atRow + 1, 5).Value = "Pause dejeuner"
-        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 6)).Interior.Color = RGB(31, 73, 125)
-        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 6)).Font.Color = RGB(255, 255, 255)
-        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 6)).Font.Bold = True
-        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 6)).HorizontalAlignment = xlCenter
+        .Cells(atRow + 1, 3).Value = "Entree"
+        .Cells(atRow + 1, 4).Value = "Sortie"
+        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 4)).Interior.Color = RGB(31, 73, 125)
+        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 4)).Font.Color = RGB(255, 255, 255)
+        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 4)).Font.Bold = True
+        .Range(.Cells(atRow + 1, 1), .Cells(atRow + 1, 4)).HorizontalAlignment = xlCenter
 
         .Range(.Cells(atRow + 2, 1), .Cells(atRow + 2, 2)).Merge
         .Cells(atRow + 2, 1).Value = "A (45%)"
         .Cells(atRow + 2, 3).Value = "8:00"
         .Cells(atRow + 2, 4).Value = "18:00"
-        .Cells(atRow + 2, 5).Value = "13:00"
-        .Cells(atRow + 2, 6).Value = "14:00"
 
         .Range(.Cells(atRow + 3, 1), .Cells(atRow + 3, 2)).Merge
         .Cells(atRow + 3, 1).Value = "B (55%)"
         .Cells(atRow + 3, 3).Value = "10:00"
         .Cells(atRow + 3, 4).Value = "20:00"
-        .Cells(atRow + 3, 5).Value = "14:00"
-        .Cells(atRow + 3, 6).Value = "15:00"
 
-        .Range(.Cells(atRow + 2, 1), .Cells(atRow + 3, 6)).HorizontalAlignment = xlCenter
-        .Range(.Cells(atRow + 2, 1), .Cells(atRow + 3, 6)).Font.Bold = True
+        .Range(.Cells(atRow + 2, 1), .Cells(atRow + 3, 4)).HorizontalAlignment = xlCenter
+        .Range(.Cells(atRow + 2, 1), .Cells(atRow + 3, 4)).Font.Bold = True
 
-        .Cells(atRow + 5, 1).Value = "Repos : Dimanche fixe + 1 jour tournant (Lundi/Mardi)."
-        .Cells(atRow + 5, 1).Font.Italic = True
-        .Cells(atRow + 6, 1).Value = "Objectif : ~7 personnes presentes / jour du mercredi au samedi."
-        .Cells(atRow + 6, 1).Font.Italic = True
+        ' --- Bloc 2 : Creneaux de pause dejeuner (colonnes 6 a 9) ---------
+        .Cells(atRow, 6).Value = "Reference pauses dejeuner (1h) :"
+        .Cells(atRow, 6).Font.Bold = True
+
+        .Cells(atRow + 1, 6).Value = "Creneau"
+        .Cells(atRow + 1, 7).Value = "Debut"
+        .Cells(atRow + 1, 8).Value = "Fin"
+        .Cells(atRow + 1, 9).Value = "Equipe concernee"
+        .Range(.Cells(atRow + 1, 6), .Cells(atRow + 1, 9)).Interior.Color = RGB(31, 73, 125)
+        .Range(.Cells(atRow + 1, 6), .Cells(atRow + 1, 9)).Font.Color = RGB(255, 255, 255)
+        .Range(.Cells(atRow + 1, 6), .Cells(atRow + 1, 9)).Font.Bold = True
+        .Range(.Cells(atRow + 1, 6), .Cells(atRow + 1, 9)).HorizontalAlignment = xlCenter
+
+        .Cells(atRow + 2, 6).Value = "12h-13h": .Cells(atRow + 2, 7).Value = "12:00"
+        .Cells(atRow + 2, 8).Value = "13:00": .Cells(atRow + 2, 9).Value = "A (8h-18h)"
+
+        .Cells(atRow + 3, 6).Value = "13h-14h": .Cells(atRow + 3, 7).Value = "13:00"
+        .Cells(atRow + 3, 8).Value = "14:00": .Cells(atRow + 3, 9).Value = "A (8h-18h)"
+
+        .Cells(atRow + 4, 6).Value = "14h-15h": .Cells(atRow + 4, 7).Value = "14:00"
+        .Cells(atRow + 4, 8).Value = "15:00": .Cells(atRow + 4, 9).Value = "B (10h-20h)"
+
+        .Cells(atRow + 5, 6).Value = "15h-16h": .Cells(atRow + 5, 7).Value = "15:00"
+        .Cells(atRow + 5, 8).Value = "16:00": .Cells(atRow + 5, 9).Value = "B (10h-20h)"
+
+        .Range(.Cells(atRow + 2, 6), .Cells(atRow + 5, 9)).HorizontalAlignment = xlCenter
+        .Range(.Cells(atRow + 2, 6), .Cells(atRow + 5, 9)).Font.Bold = True
+
+        ' --- Note sur le repos hebdomadaire -------------------------------
+        .Cells(atRow + 7, 1).Value = "Repos : Dimanche fixe + 1 jour tournant entre Mercredi et Samedi " & _
+                                      "(Lundi et Mardi toujours travailles)."
+        .Cells(atRow + 7, 1).Font.Italic = True
+        .Cells(atRow + 8, 1).Value = "Objectif : ~7 personnes presentes / jour du mercredi au samedi."
+        .Cells(atRow + 8, 1).Font.Italic = True
     End With
 End Sub
 
@@ -606,7 +651,13 @@ Function GetCol(headers As Object, ByVal key As String) As Long
     If headers.Exists(normKey) Then
         GetCol = headers(normKey)
     Else
-        Err.Raise vbObjectError + 1, , "Colonne introuvable dans la BDD pour la cle : " & key
+        Dim k As Variant, listeEntetes As String
+        For Each k In headers.Keys
+            listeEntetes = listeEntetes & IIf(listeEntetes = "", "", ", ") & k
+        Next k
+        Err.Raise vbObjectError + 1, , "Colonne introuvable dans la BDD pour la cle : " & key & _
+                  " (normalisee : " & normKey & ")." & vbCrLf & _
+                  "En-tetes detectes en ligne 1 de la BDD : " & listeEntetes
     End If
 End Function
 
