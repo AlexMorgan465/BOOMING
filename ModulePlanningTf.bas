@@ -207,7 +207,7 @@ End Sub
 '--------------------------------------------------------------------
 ' Structure regroupant toutes les infos calculees pour un agent / semaine
 '--------------------------------------------------------------------
-Private Type AgentWeekInfo
+Public Type AgentWeekInfo
     Zone As String
     Nom As String
     EntreeH(1 To 7) As Integer
