@@ -2,6 +2,25 @@ Attribute VB_Name = "ModulePlanningTf"
 
 Option Explicit
 
+'--------------------------------------------------------------------
+' Structure regroupant toutes les infos calculees pour un agent / semaine
+'--------------------------------------------------------------------
+Public Type TF_AgentInfo
+    Zone As String
+    Nom As String
+    EntreeH(1 To 7) As Integer
+    SortieH(1 To 7) As Integer
+    IsOff(1 To 7) As Boolean
+    Comment(1 To 7) As String
+    PauseDebut(1 To 7) As String   ' "" si OFF
+    PauseFin(1 To 7) As String
+    RowBDD As Long
+    EquipeLabel As String
+    JourRepoTournant As Integer
+    JourCourt As Integer           ' 0 = pas de jour raccourci
+End Type
+
+
 '=====================================================================================
 ' GENERATEUR DE PLANNING - Projet "TF"  (v2)
 '=====================================================================================
@@ -126,20 +145,20 @@ Sub GenererPlanningTF()
     nEquipeA = CLng(Int(nCollab * PART_EQUIPE_A + 0.5))
 
     ' --- Pre-calcul des infos (equipe / repos / jour raccourci) + horaires jour par jour
-    Dim collabInfo() As AgentWeekInfo
+    Dim collabInfo() As TF_AgentInfo
     ReDim collabInfo(1 To nCollab)
     Dim i As Long
     For i = 1 To nCollab
-        collabInfo(i) = BuildAgentWeekInfo(wsBDD, headers, collabRows(i), weekStart, _
+        collabInfo(i) = BuildTF_AgentInfo(wsBDD, headers, collabRows(i), weekStart, _
                                             i - 1, nCollab, nEquipeA, weekNum)
     Next i
 
-    Dim managerInfo() As AgentWeekInfo
+    Dim managerInfo() As TF_AgentInfo
     ReDim managerInfo(1 To nManager)
     For i = 1 To nManager
         ' Les managers restent sur une equipe fixe "large" (existant deja dans la BDD) :
         ' on reutilise la meme mecanique Equipe A/B pour rester coherent, sans jour raccourci.
-        managerInfo(i) = BuildAgentWeekInfo(wsBDD, headers, managerRows(i), weekStart, _
+        managerInfo(i) = BuildTF_AgentInfo(wsBDD, headers, managerRows(i), weekStart, _
                                              i - 1, IIf(nManager = 0, 1, nManager), _
                                              IIf(nManager = 0, 0, nManager), weekNum, _
                                              applyShortDay:=False)
@@ -204,34 +223,17 @@ ErrHandler:
     MsgBox "Erreur : " & Err.Description, vbCritical
 End Sub
 
-'--------------------------------------------------------------------
-' Structure regroupant toutes les infos calculees pour un agent / semaine
-'--------------------------------------------------------------------
-Public Type AgentWeekInfo
-    Zone As String
-    Nom As String
-    EntreeH(1 To 7) As Integer
-    SortieH(1 To 7) As Integer
-    IsOff(1 To 7) As Boolean
-    Comment(1 To 7) As String
-    PauseDebut(1 To 7) As String   ' "" si OFF
-    PauseFin(1 To 7) As String
-    RowBDD As Long
-    EquipeLabel As String
-    JourRepoTournant As Integer
-    JourCourt As Integer           ' 0 = pas de jour raccourci
-End Type
 
 '--------------------------------------------------------------------
 ' Calcule equipe / repos / jour raccourci / horaires jour par jour / pauses
 ' pour un agent donne, sur la semaine "weekStart".
 '--------------------------------------------------------------------
-Function BuildAgentWeekInfo(wsBDD As Worksheet, headers As Object, rowBDD As Long, _
+Function BuildTF_AgentInfo(wsBDD As Worksheet, headers As Object, rowBDD As Long, _
                              weekStart As Date, ByVal pos As Long, ByVal total As Long, _
                              ByVal nEquipeA As Long, ByVal weekNum As Long, _
-                             Optional ByVal applyShortDay As Boolean = True) As AgentWeekInfo
+                             Optional ByVal applyShortDay As Boolean = True) As TF_AgentInfo
 
-    Dim info As AgentWeekInfo
+    Dim info As TF_AgentInfo
     info.RowBDD = rowBDD
 
     Dim nomComplet As String
@@ -280,7 +282,7 @@ Function BuildAgentWeekInfo(wsBDD As Worksheet, headers As Object, rowBDD As Lon
         End If
     Next dayIndex
 
-    BuildAgentWeekInfo = info
+    BuildTF_AgentInfo = info
 End Function
 
 '--------------------------------------------------------------------
@@ -485,7 +487,7 @@ End Function
 '--------------------------------------------------------------------
 ' Ecrit les horaires calcules dans la BDD (colonnes LUN Entree...DIM Sortie)
 '--------------------------------------------------------------------
-Sub WriteAgentHoursToBDD(wsBDD As Worksheet, headers As Object, info As AgentWeekInfo, weekStart As Date)
+Sub WriteAgentHoursToBDD(wsBDD As Worksheet, headers As Object, info As TF_AgentInfo, weekStart As Date)
     Dim dayIndex As Integer
     For dayIndex = 1 To 7
         Dim colEntreeBDD As Long, colSortieBDD As Long
@@ -508,7 +510,7 @@ End Sub
 ' Ecrit une ligne "collaborateur" dans la feuille SHIFTS
 ' (Zones | Nom | 7x(Debut,Fin) | Commentaires)
 '--------------------------------------------------------------------
-Function WriteShiftRow(ws As Worksheet, info As AgentWeekInfo, outRow As Long) As Long
+Function WriteShiftRow(ws As Worksheet, info As TF_AgentInfo, outRow As Long) As Long
     ws.Cells(outRow, 1).Value = info.Zone
     ws.Cells(outRow, 2).Value = info.Nom
     ws.Cells(outRow, 1).Font.Bold = True
@@ -552,7 +554,7 @@ End Function
 ' Ecrit une ligne "collaborateur" dans la feuille PAUSES
 ' (Zones | Nom | 7x(DP,FP), pas de colonne Commentaires)
 '--------------------------------------------------------------------
-Function WritePauseRow(ws As Worksheet, info As AgentWeekInfo, outRow As Long) As Long
+Function WritePauseRow(ws As Worksheet, info As TF_AgentInfo, outRow As Long) As Long
     ws.Cells(outRow, 1).Value = info.Zone
     ws.Cells(outRow, 2).Value = info.Nom
     ws.Cells(outRow, 1).Font.Bold = True
@@ -576,7 +578,7 @@ End Function
 ' Ecrit une ligne "Manager" (format detaille, identique pour les 2 feuilles) :
 ' Zones | Nom | 7x(Debut,Fin) | OFF | NB heures planifiees | TT | Commentaires
 '--------------------------------------------------------------------
-Function WriteManagerRow(ws As Worksheet, info As AgentWeekInfo, outRow As Long) As Long
+Function WriteManagerRow(ws As Worksheet, info As TF_AgentInfo, outRow As Long) As Long
     ws.Cells(outRow, 1).Value = info.Zone
     ws.Cells(outRow, 2).Value = info.Nom
     ws.Cells(outRow, 1).Font.Bold = True
@@ -629,7 +631,7 @@ End Function
 ' Recap journalier (Mardi -> Samedi) pour les COLLABORATEURS uniquement :
 ' NB Ouverture / NB Middle / NB Fermeture / NB OFF
 '--------------------------------------------------------------------
-Function WriteDailyRecap(ws As Worksheet, startRow As Long, collabInfo() As AgentWeekInfo, _
+Function WriteDailyRecap(ws As Worksheet, startRow As Long, collabInfo() As TF_AgentInfo, _
                           ByVal nCollab As Long) As Long
     Dim labels As Variant
     labels = Array("Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi") ' dayIndex 2..6
