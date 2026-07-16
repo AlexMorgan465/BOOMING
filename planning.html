@@ -392,7 +392,7 @@ input[type=range]{
 <body>
 
 <div class="appbar">
-  <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S29</span></h1>
+  <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S29</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
   <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
   <button class="btn btn-primary" id="exportBtn">⬇ Exporter en Excel</button>
   <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran</div>
@@ -810,6 +810,40 @@ function closePopover(){
 }
 document.getElementById('popClose').addEventListener('click', closePopover);
 backdrop.addEventListener('click', closePopover);
+
+/* ---------------- AUTO-DATES FROM WEEK NUMBER ---------------- */
+const MONTHS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+function mondayOfISOWeek(week, year){
+  // date of the Monday of the given ISO week number for the given year
+  const simple = new Date(year, 0, 1 + (week-1)*7);
+  const dow = simple.getDay() || 7; // Sunday=0 -> 7
+  const monday = new Date(simple);
+  monday.setDate(simple.getDate() - dow + 1);
+  return monday;
+}
+
+function formatDateFR(dateObj){
+  return `${dateObj.getDate()} ${MONTHS_FR[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+}
+
+function updateDatesFromWeek(){
+  const weekTxt = document.getElementById('weekBadge').innerText.trim();
+  const yearTxt = document.getElementById('yearBadge').innerText.trim();
+  const week = parseInt(weekTxt.replace(/\D/g,''));
+  const year = parseInt(yearTxt.replace(/\D/g,''));
+  if(!week || week<1 || week>53 || !year){ return; }
+  const monday = mondayOfISOWeek(week, year);
+  for(let i=0;i<7;i++){
+    const dt = new Date(monday);
+    dt.setDate(monday.getDate()+i);
+    DATES[i] = formatDateFR(dt);
+  }
+  renderAll();
+}
+
+document.getElementById('weekBadge').addEventListener('blur', updateDatesFromWeek);
+document.getElementById('yearBadge').addEventListener('blur', updateDatesFromWeek);
 
 /* ---------------- TABS ---------------- */
 document.querySelectorAll('.tab').forEach(tab=>{
