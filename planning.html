@@ -425,7 +425,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 <div class="appbar">
   <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S28</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
   <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
-  <button class="btn btn-primary" id="exportBtn">⬇ Exporter en Excel</button>
+  <button class="btn btn-primary" id="exportBtn">⬇ Exporter (heure MA)</button>
+  <button class="btn btn-primary" id="exportFrBtn">⬇ Exporter (heure FR)</button>
   <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build multi-activités-v1</div>
 </div>
 
@@ -535,7 +536,7 @@ const STATUS = {
 const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', off:'#D9534F', conge:'#3F8F5E', mission:'#DB8A2A', presse:'#C9A227'};
 const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', off:'FFFBE7E6', conge:'FFE4F3E8', mission:'FFFCEBD6', presse:'FFFAF1CE'};
 /* Statuts qui affichent un horaire (début–fin) au lieu d'un simple libellé */
-function isWorkLike(status){ return status==='work' || status==='teletravail'; }
+function isWorkLike(status){ return status==='work' || status==='teletravail' || status==='mission'; }
 
 function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
 function minToTime(m){ const h=Math.floor(m/60).toString().padStart(2,'0'); const mm=(m%60).toString().padStart(2,'0'); return h+':'+mm; }
@@ -792,7 +793,15 @@ let currentSubtab = 'managers';
    that happens to point at that same shared object. We deep-clone every
    day-cell right after loading the data so each cell is fully independent. */
 function cloneCells(arr){
-  arr.forEach(row=>{ row.days = JSON.parse(JSON.stringify(row.days)); });
+  arr.forEach(row=>{
+    row.days = JSON.parse(JSON.stringify(row.days));
+    // Missions inherit the row's regular working hours so they display like télétravail
+    // (colored background + times) instead of a "Mission" label.
+    const ref = row.days.find(c=>c.status==='work' && c.start && c.end);
+    const defS = ref? ref.start : '8:00';
+    const defE = ref? ref.end : '17:00';
+    row.days.forEach(c=>{ if(c.status==='mission' && !c.start){ c.start = defS; c.end = defE; } });
+  });
 }
 PROJECTS.forEach(pk=>{
   cloneCells(data[pk].managers);
@@ -989,6 +998,11 @@ let current = null; // {table, row, day}
 /* Boutons horaires fixes pour début / fin */
 const START_OPTIONS = ['7:00','8:00','9:00','10:00','11:00'];
 const END_OPTIONS = ['16:00','17:00','18:00','19:00','20:00'];
+const PAUSE_START_OPTIONS = ['11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00'];
+function addOneHour(t){
+  const [h,m] = t.split(':').map(Number);
+  return (h+1) + ':' + m.toString().padStart(2,'0');
+}
 
 function openPopover(td){
   const table = td.dataset.table, row = +td.dataset.row, day = +td.dataset.day;
@@ -1007,7 +1021,10 @@ function openPopover(td){
       const newStatus = btn.dataset.status;
       cell.status = newStatus;
       const workLike = isWorkLike(newStatus);
-      if(workLike && !cell.start){ cell.start='8:00'; cell.end='17:00'; }
+      if(workLike && !cell.start){
+        if(current && current.table==='pause'){ cell.start='12:00'; cell.end='13:00'; }
+        else { cell.start='8:00'; cell.end='17:00'; }
+      }
       statusGrid.querySelectorAll('.status-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       timeBlock.classList.toggle('show', workLike);
@@ -1034,31 +1051,47 @@ function openPopover(td){
 }
 
 function renderTimeButtons(cell){
-  startBtnGrid.innerHTML = START_OPTIONS.map(t=>
+  const isPause = current && current.table === 'pause';
+  const startOpts = isPause ? PAUSE_START_OPTIONS : START_OPTIONS;
+  // In pause, end is derived (start + 1h) — snap now to keep data consistent.
+  if(isPause && cell.start){ cell.end = addOneHour(cell.start); }
+  startBtnGrid.innerHTML = startOpts.map(t=>
     `<button type="button" class="time-btn ${cell.start===t?'active':''}" data-role="start" data-time="${t}">${t}</button>`
   ).join('');
-  endBtnGrid.innerHTML = END_OPTIONS.map(t=>
-    `<button type="button" class="time-btn ${cell.end===t?'active':''}" data-role="end" data-time="${t}">${t}</button>`
-  ).join('');
+  if(isPause){
+    endBtnGrid.innerHTML = cell.end
+      ? `<button type="button" class="time-btn active" disabled>${cell.end}</button><div style="font-size:11px;color:var(--sub);margin-left:6px;align-self:center">(début + 1h)</div>`
+      : `<div style="font-size:11.5px;color:var(--sub)">Choisir un début</div>`;
+  } else {
+    endBtnGrid.innerHTML = END_OPTIONS.map(t=>
+      `<button type="button" class="time-btn ${cell.end===t?'active':''}" data-role="end" data-time="${t}">${t}</button>`
+    ).join('');
+  }
 
   startBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       cell.start = btn.dataset.time;
+      if(isPause){ cell.end = addOneHour(cell.start); }
       startBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
+      if(isPause){
+        endBtnGrid.innerHTML = `<button type="button" class="time-btn active" disabled>${cell.end}</button><div style="font-size:11px;color:var(--sub);margin-left:6px;align-self:center">(début + 1h)</div>`;
+      }
       updatePreviewFill(cell);
       refreshCellDisplay();
     });
   });
-  endBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      cell.end = btn.dataset.time;
-      endBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      updatePreviewFill(cell);
-      refreshCellDisplay();
+  if(!isPause){
+    endBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        cell.end = btn.dataset.time;
+        endBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        updatePreviewFill(cell);
+        refreshCellDisplay();
+      });
     });
-  });
+  }
 
   updatePreviewFill(cell);
 }
@@ -1177,14 +1210,19 @@ document.getElementById('addRowBtn').addEventListener('click', ()=>{
 });
 
 /* ---------------- EXPORT EXCEL ---------------- */
-function fmtHeureExcel(t){
+function fmtHeureExcel(t, offset, formatH){
   if(!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  if (m === 0) return `${h}H`;
-  return `${h}H${m.toString().padStart(2, '0')}`;
+  let [h, m] = t.split(':').map(Number);
+  h = h + (offset||0);
+  if(formatH){
+    if (m === 0) return `${h}H`;
+    return `${h}H${m.toString().padStart(2, '0')}`;
+  }
+  return `${h}:${m.toString().padStart(2, '0')}`;
 }
 
-async function exportExcel(){
+async function exportExcel(hourOffset){
+  const offset = hourOffset || 0;
   const wb = new ExcelJS.Workbook();
   const weekTxt = document.getElementById('weekBadge').innerText.trim();
   const yearTxt = document.getElementById('yearBadge').innerText.trim();
@@ -1255,7 +1293,7 @@ async function exportExcel(){
         r.days.forEach((c,di)=>{
           const sCell = row.getCell(DAY_COLS_START + di*2);
           const eCell = row.getCell(DAY_COLS_START + di*2 + 1);
-          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start); eCell.value = fmtHeureExcel(c.end); }
+          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start, offset, false); eCell.value = fmtHeureExcel(c.end, offset, false); }
           else { sCell.value = STATUS[c.status].label.toUpperCase(); eCell.value = STATUS[c.status].label.toUpperCase(); }
           [sCell,eCell].forEach(cell=>{
             cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
@@ -1348,7 +1386,7 @@ async function exportExcel(){
         r.days.forEach((c,di)=>{
           const sCell = row.getCell(C_DAY_START + di*2);
           const eCell = row.getCell(C_DAY_START + di*2 + 1);
-          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start); eCell.value = fmtHeureExcel(c.end); }
+          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start, offset, true); eCell.value = fmtHeureExcel(c.end, offset, true); }
           else { sCell.value = STATUS[c.status].label.toUpperCase(); eCell.value = STATUS[c.status].label.toUpperCase(); }
           [sCell,eCell].forEach(cell=>{
             cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
@@ -1373,11 +1411,13 @@ async function exportExcel(){
   const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `Planning_${weekLabel.replace(/\s+/g,'_')}.xlsx`;
+  const suffix = offset ? '_HeureFR' : '_HeureMA';
+  a.href = url; a.download = `Planning_${weekLabel.replace(/\s+/g,'_')}${suffix}.xlsx`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-document.getElementById('exportBtn').addEventListener('click', exportExcel);
+document.getElementById('exportBtn').addEventListener('click', ()=>exportExcel(0));
+document.getElementById('exportFrBtn').addEventListener('click', ()=>exportExcel(1));
 
 
 /* ---------------- INIT ---------------- */
