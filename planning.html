@@ -395,7 +395,7 @@ input[type=range]{
   <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S29</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
   <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
   <button class="btn btn-primary" id="exportBtn">⬇ Exporter en Excel</button>
-  <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran</div>
+  <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build fix-cellules-indépendantes-v2</div>
 </div>
 
 <div class="tabs">
@@ -577,6 +577,18 @@ let stats = {
   middlePlus:[0,0,0,0,0,0,0],
   fermeture:[8,7,8,9,8,7,4]
 };
+
+/* IMPORTANT: OFF / CONGE / MISSION / PRESSE / and every w(...) call used above
+   were built once and reused as the SAME object across many cells. Without
+   cloning, editing one cell (e.g. samedi OFF) would mutate every other cell
+   that happens to point at that same shared object. We deep-clone every
+   day-cell right after loading the data so each cell is fully independent. */
+function cloneCells(arr){
+  arr.forEach(row=>{ row.days = JSON.parse(JSON.stringify(row.days)); });
+}
+cloneCells(managers);
+cloneCells(pause);
+cloneCells(zones);
 
 /* ---------------- RENDER HELPERS ---------------- */
 function barFillStyle(cellData, colorHex){
