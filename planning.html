@@ -431,9 +431,12 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 <div class="appbar">
   <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S28</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
   <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
+  <button class="btn btn-ghost" id="importBtn">⬆ Importer un planning</button>
+  <input type="file" id="importFile" accept=".xlsx" style="display:none">
   <button class="btn btn-primary" id="exportBtn">⬇ Exporter (heure MA)</button>
   <button class="btn btn-primary" id="exportFrBtn">⬇ Exporter (heure FR)</button>
   <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build multi-activités-v1</div>
+
 </div>
 
 <div class="tabs proj-tabs" id="projTabs">
@@ -445,6 +448,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
   <div class="tab" data-project="facto">Facto</div>
   <div class="tab" data-project="tlv">TLV</div>
   <div class="tab" data-project="glf">GLF</div>
+  <div class="tab" data-project="ebra">Ebra</div>
+  <div class="tab" data-project="mentionbac">Mention Bac</div>
   <div class="tab tab-complet" data-project="complet">📊 Planning complet</div>
 </div>
 
@@ -558,7 +563,7 @@ function zoneColor(zone){
 }
 
 /* ---------------- PROJECTS ---------------- */
-const PROJECTS = ['googleleads','accessibilite','afedim','cmleasing','dac','facto','tlv','glf'];
+const PROJECTS = ['googleleads','accessibilite','afedim','cmleasing','dac','facto','tlv','glf','ebra','mentionbac'];
 const PROJECT_LABELS = {
   googleleads:'Google Leads',
   accessibilite:'Accessibilité',
@@ -567,7 +572,9 @@ const PROJECT_LABELS = {
   dac:'DAC',
   facto:'Facto',
   tlv:'TLV',
-  glf:'GLF'
+  glf:'GLF',
+  ebra:'Ebra',
+  mentionbac:'Mention Bac'
 };
 
 /* ---------------- DATA : Google Leads (activité déjà construite) ---------------- */
@@ -779,6 +786,150 @@ const glf_zones = [
 ];
 const glf_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
 
+/* ---------------- DATA : Ebra ---------------- */
+const ebra_managers = [
+  {zone:'ZONE8', role:'Manager', name:'EL BAHLOULY DOHA', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('7:00','11:00'),OFF], comment:'RAS'},
+  {zone:'TRSPT KO', role:'Manager', name:'CHOUIFI MUSTAPHA', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('7:00','11:00'),OFF], comment:'RAS'},
+  {zone:'TRSPT KO', role:'Manager', name:'MOUNAJI SOUKAINA', days:[w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),OFF,OFF], comment:'RAS'}
+];
+const ebra_pause = [
+  {zone:'ZONE8', name:'EL BAHLOULY DOHA', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'TRSPT KO', name:'CHOUIFI MUSTAPHA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('13:30','14:30'),OFF,OFF]},
+  {zone:'TRSPT KO', name:'MOUNAJI SOUKAINA', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('12:30','13:30'),OFF,OFF]},
+  {zone:'ZONE4', name:'EL IDRISSI ELHASSANI MAHA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE3', name:'BOUABDILLAH ZAKARIA', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE6', name:'EL GUARJAOUI HIBA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE3', name:'LIMANE HIBA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE6', name:'HAMDOUNI YASSER', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE7', name:'CHAYAH CHAIMAE', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE3', name:'RHEMARI REDA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE4', name:'GOMIS AMINATA AGNES', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'AMRI ZINEB', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE7', name:'OUERRADI ZOUHAIR', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE2', name:'SBAR SANAE', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'BOULLOUH HADDOU', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE6', name:'MESKOURI NABILA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'BENMOUSSA EL MEHDI YASSIN', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'CHAMKHA NOUHAILA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE4', name:'AMEZIANE ZAKARIA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE1', name:'AIT ELMAHJOUB TAOUFIQ', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE4', name:'AGUILOU MOHAMED', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE5', name:'ZAYER SALMA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE6', name:'AAZAROU BOUTAYNA', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE7', name:'EL OUIKSANI SAMIA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE4', name:'ZAIMI NADA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'ELANMATI LAMIAE', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE6', name:'CISSE OUMAR', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE8', name:'BOCOUM DIAWARIAH', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE4', name:'FAYE ROKHAYA', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'BOUQATA HIBA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE3', name:'YOUNOUSSI Houda', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE4', name:'EL BASRI NAJIB', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'MERZOUG NASRALLAH', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
+  {zone:'ZONE6', name:'CISSE SALIOU', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'TRSPT KO', name:'EL ABBIOUI AYOUB', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]}
+];
+const _EBRA_STD = () => [w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','11:00'),OFF];
+const ebra_zones = [
+  {zone:'ZONE4', name:'EL IDRISSI ELHASSANI MAHA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'BOUABDILLAH ZAKARIA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'EL GUARJAOUI HIBA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'LIMANE HIBA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'HAMDOUNI YASSER', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'CHAYAH CHAIMAE', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'RHEMARI REDA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'GOMIS AMINATA AGNES', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'AMRI ZINEB', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'OUERRADI ZOUHAIR', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE2', name:'SBAR SANAE', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'BOULLOUH HADDOU', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'MESKOURI NABILA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'BENMOUSSA EL MEHDI YASSIN', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'CHAMKHA NOUHAILA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'AMEZIANE ZAKARIA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE1', name:'AIT ELMAHJOUB TAOUFIQ', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'AGUILOU MOHAMED', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'ZAYER SALMA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'AAZAROU BOUTAYNA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'EL OUIKSANI SAMIA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'ZAIMI NADA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'ELANMATI LAMIAE', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'CISSE OUMAR', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE8', name:'BOCOUM DIAWARIAH', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'FAYE ROKHAYA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'BOUQATA HIBA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'YOUNOUSSI Houda', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'EL BASRI NAJIB', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'MERZOUG NASRALLAH', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'CISSE SALIOU', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'EL ABBIOUI AYOUB', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'}
+];
+const ebra_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
+/* ---------------- DATA : Mention Bac ---------------- */
+const mb_managers = [
+  {zone:'ZONE 6', role:'Back-UP Manager', name:'RHOUDANE OTHMANE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], comment:'RAS'},
+  {zone:'ZONE 4', role:'Missionnée', name:'IHASSANE IKRAM', days:[OFF,w('9:00','19:00'),w('8:00','18:00'),w('9:00','19:00'),w('10:00','19:00'),w('9:00','19:00'),OFF], comment:'RAS'}
+];
+const mb_pause = [
+  {zone:'ZONE 5', name:'EZZAMET MARWA', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE 5', name:'BENGHANNOU IBTISSAM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE 5', name:'BENGHANNOU IMANE', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
+  {zone:'ZONE 7', name:'NAKHLA AYA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE 4', name:'ANISSE MOHAMMED', days:[w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF]},
+  {zone:'ZONE 1', name:'HAJIM YASSINE', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE 4', name:'EL ALAMI AYMAN', days:[w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
+  {zone:'ZONE 1', name:'BOUCHARA IMANE', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE 4', name:'LYACOUBI HOUDA', days:[w('12:00','13:00'),w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
+  {zone:'ZONE 4', name:'KINANA WIDAD', days:[w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
+  {zone:'ZONE 5', name:'CHOUKRI LOUBNA', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
+  {zone:'ZONE 3', name:'CHAFI SARA', days:[w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
+  {zone:'ZONE 8', name:'BARTOUT AYA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
+  {zone:'TRSPT KO', name:'DINI SALWA', days:[w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF]},
+  {zone:'ZONE 1', name:'ATIR RIM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE 5', name:'EL-ANAZI AMAL', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),OFF]},
+  {zone:'ZONE 5', name:'YOUSFI HIYAM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),OFF]},
+  {zone:'ZONE 3', name:'BARNASSO HAMZA', days:[OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
+  {zone:'ZONE 4', name:'MOULINE SALMA', days:[OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
+  {zone:'ZONE 4', name:'ERBATI SALMA', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
+  {zone:'ZONE 4', name:'AJMILA MOUNA', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
+  {zone:'ZONE 4', name:'BENMESSAOUD ISRAE', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),OFF]},
+  {zone:'ZONE 1', name:'ZOHRI RANA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE 7', name:'ABILLAT ALAE', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
+  {zone:'ZONE 7', name:'ENNOUR AYDA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE 7', name:'BELMEJDOUB FATIMA ZAHRA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]}
+];
+const mb_zones = [
+  {zone:'ZONE 5', name:'EZZAMET MARWA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 5', name:'BENGHANNOU IBTISSAM', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 5', name:'BENGHANNOU IMANE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 7', name:'NAKHLA AYA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'ANISSE MOHAMMED', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 1', name:'HAJIM YASSINE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'EL ALAMI AYMAN', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 1', name:'BOUCHARA IMANE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'LYACOUBI HOUDA', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'KINANA WIDAD', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 5', name:'CHOUKRI LOUBNA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 3', name:'CHAFI SARA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 8', name:'BARTOUT AYA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'DINI SALWA', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 1', name:'ATIR RIM', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 5', name:'EL-ANAZI AMAL', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 5', name:'YOUSFI HIYAM', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),OFF,w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 3', name:'BARNASSO HAMZA', days:[OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'MOULINE SALMA', days:[OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'ERBATI SALMA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'AJMILA MOUNA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 4', name:'BENMESSAOUD ISRAE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 1', name:'ZOHRI RANA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 7', name:'ABILLAT ALAE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 7', name:'ENNOUR AYDA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE 7', name:'BELMEJDOUB FATIMA ZAHRA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
+];
+const mb_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
+
 /* ---------------- ASSEMBLE ---------------- */
 const data = {
   googleleads:{ managers:gl_managers, pause:gl_pause, zones:gl_zones, stats:gl_stats },
@@ -788,7 +939,9 @@ const data = {
   dac:{ managers:dac_managers, pause:dac_pause, zones:dac_zones, stats:dac_stats },
   facto:{ managers:facto_managers, pause:facto_pause, zones:facto_zones, stats:facto_stats },
   tlv:{ managers:tlv_managers, pause:tlv_pause, zones:tlv_zones, stats:tlv_stats },
-  glf:{ managers:glf_managers, pause:glf_pause, zones:glf_zones, stats:glf_stats }
+  glf:{ managers:glf_managers, pause:glf_pause, zones:glf_zones, stats:glf_stats },
+  ebra:{ managers:ebra_managers, pause:ebra_pause, zones:ebra_zones, stats:ebra_stats },
+  mentionbac:{ managers:mb_managers, pause:mb_pause, zones:mb_zones, stats:mb_stats }
 };
 
 let currentProject = 'googleleads';
@@ -1434,9 +1587,167 @@ async function exportExcel(hourOffset){
 document.getElementById('exportBtn').addEventListener('click', ()=>exportExcel(0));
 document.getElementById('exportFrBtn').addEventListener('click', ()=>exportExcel(1));
 
+/* ---------------- IMPORT ---------------- */
+function cellText(v){
+  if (v == null) return '';
+  if (typeof v === 'object'){
+    if ('richText' in v && Array.isArray(v.richText)) return v.richText.map(t=>t.text).join('');
+    if ('text' in v) return typeof v.text === 'string' ? v.text : cellText(v.text);
+    if ('result' in v) return String(v.result ?? '');
+    if ('formula' in v) return '';
+  }
+  return String(v);
+}
+function parseTimeCell(txt, hourOffset){
+  if (!txt) return null;
+  const s = String(txt).trim();
+  // format "H:MM" ou "HHhMM" ou "HHHMM" (ex 8H30) ou "8"
+  const m = s.match(/^(\d{1,2})\s*[:hH]\s*(\d{2})?$/) || s.match(/^(\d{1,2})$/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const mm = m[2] ? parseInt(m[2], 10) : 0;
+  h -= (hourOffset || 0); // reverse offset appliqué à l'export
+  if (h < 0) h += 24;
+  if (h > 23) h -= 24;
+  const total = h*60 + mm;
+  if (total < DAY_MIN || total > DAY_MAX) return minToTime(Math.max(DAY_MIN, Math.min(DAY_MAX, total)));
+  return minToTime(total);
+}
+const STATUS_LABEL_MAP = (()=>{
+  const m = {};
+  Object.entries(STATUS).forEach(([k,v])=>{ m[v.label.toUpperCase()] = k; });
+  m['TÉLÉTRAVAIL'] = 'teletravail'; m['TELETRAVAIL'] = 'teletravail';
+  m['CONGÉ'] = 'conge'; m['CONGE'] = 'conge';
+  m['MISSIONNÉE'] = 'mission'; m['MISSIONNEE'] = 'mission'; m['MISSION'] = 'mission';
+  return m;
+})();
+function parseDayCells(startTxt, endTxt, hourOffset){
+  const sU = (startTxt||'').toString().trim().toUpperCase();
+  const eU = (endTxt||'').toString().trim().toUpperCase();
+  if (STATUS_LABEL_MAP[sU]) return d(STATUS_LABEL_MAP[sU]);
+  if (STATUS_LABEL_MAP[eU]) return d(STATUS_LABEL_MAP[eU]);
+  const s = parseTimeCell(startTxt, hourOffset);
+  const e = parseTimeCell(endTxt, hourOffset);
+  if (s && e) return w(s, e);
+  return OFF;
+}
+
+async function importExcel(file){
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+
+    // Detect hour offset from filename
+    const fname = (file.name||'').toLowerCase();
+    const hourOffset = fname.includes('_heurefr') ? 1 : 0;
+
+    // Map worksheet name -> project key via PROJECT_LABELS
+    const labelToKey = {};
+    Object.entries(PROJECT_LABELS).forEach(([k,v])=>{ labelToKey[v.substring(0,31).toLowerCase()] = k; });
+
+    let importedProjects = 0;
+    let firstWeekTxt = null;
+
+    wb.worksheets.forEach(ws=>{
+      const pk = labelToKey[(ws.name||'').toLowerCase()];
+      if (!pk) return; // ignore "Planning complet" et autres
+
+      const buckets = { zones:[], pause:[], managers:[] };
+      let currentSection = null;
+      let headerRow = null;
+
+      const detectSection = (txt)=>{
+        const t = (txt||'').toString().toUpperCase();
+        if (t.startsWith('PLANNING ZONES')) return 'zones';
+        if (t.startsWith('PLANNING PAUSE')) return 'pause';
+        if (t.startsWith('MANAGERS ET GF')) return 'managers';
+        if (t.startsWith('SYNTHÈSE') || t.startsWith('SYNTHESE')) return '__stop';
+        return null;
+      };
+
+      ws.eachRow({includeEmpty:false}, (row)=>{
+        const firstTxt = cellText(row.getCell(1).value).trim();
+        const sec = detectSection(firstTxt);
+        if (sec){
+          currentSection = sec === '__stop' ? null : sec;
+          headerRow = null;
+          return;
+        }
+        if (!currentSection) return;
+
+        // skip header rows: "Zone" or "Début"
+        if (/^zone$/i.test(firstTxt) || /^début$/i.test(firstTxt) || /^debut$/i.test(firstTxt)){
+          headerRow = true;
+          return;
+        }
+        // placeholder empty section
+        if (firstTxt === '—' || firstTxt === '-') return;
+        if (!headerRow) return;
+
+        const zone = firstTxt;
+        const nameFull = cellText(row.getCell(2).value).trim();
+        if (!zone && !nameFull) return;
+
+        const days = [];
+        for (let i=0;i<7;i++){
+          const sC = row.getCell(3 + i*2).value;
+          const eC = row.getCell(3 + i*2 + 1).value;
+          days.push(parseDayCells(cellText(sC), cellText(eC), hourOffset));
+        }
+        const hasExtra = currentSection !== 'pause';
+        const comment = hasExtra ? cellText(row.getCell(3 + 14 + 2).value).trim() : '';
+
+        // split role from name for managers section (e.g. "Manager NOM PRENOM" or "GF NOM PRENOM")
+        let role = '', name = nameFull;
+        if (currentSection === 'managers'){
+          const mm = nameFull.match(/^(Manager|GF|Responsable|Chef|Superviseur)\s+(.+)$/i);
+          if (mm){ role = mm[1]; name = mm[2]; }
+        }
+
+        buckets[currentSection].push({ zone, role, name, days, comment });
+      });
+
+      // Only overwrite if at least one row was parsed
+      if (buckets.zones.length + buckets.pause.length + buckets.managers.length > 0){
+        data[pk].zones = buckets.zones;
+        data[pk].pause = buckets.pause;
+        data[pk].managers = buckets.managers;
+        importedProjects++;
+      }
+    });
+
+    // Try to read week label from "Planning complet" first data row (col 1 = Semaine)
+    const wsC = wb.getWorksheet('Planning complet');
+    if (wsC){
+      const r2 = wsC.getRow(2);
+      const semaine = cellText(r2.getCell(1).value).trim();
+      if (semaine) firstWeekTxt = semaine;
+    }
+    if (firstWeekTxt){
+      document.getElementById('weekBadge').innerText = firstWeekTxt;
+    }
+
+    renderAll();
+    alert(`Import terminé — ${importedProjects} activité(s) chargée(s).`);
+  } catch(err){
+    console.error(err);
+    alert('Erreur pendant l\'import : ' + (err.message || err));
+  }
+}
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const f = e.target.files && e.target.files[0];
+  if (f) importExcel(f);
+  e.target.value = '';
+});
 
 /* ---------------- INIT ---------------- */
 renderAll();
+
 </script>
 </body>
 </html>
