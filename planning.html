@@ -26,6 +26,8 @@
   --amber-soft:#FCEBD6;
   --gold:#C9A227;
   --gold-soft:#FAF1CE;
+  --sky:#2F7FB5;
+  --sky-soft:#E1EEF7;
   --violet:#6C4FA8;
   --violet-soft:#EBE5F7;
   --radius:10px;
@@ -279,10 +281,12 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .status-conge .status-text{color:var(--sage);}
 .status-mission .status-text{color:var(--amber);}
 .status-presse .status-text{color:var(--gold);}
+.status-maladie .status-text{color:var(--sky);}
 .status-off{background:var(--rose-soft);}
 .status-conge{background:var(--sage-soft);}
 .status-mission{background:var(--amber-soft);}
 .status-presse{background:var(--gold-soft);}
+.status-maladie{background:var(--sky-soft);}
 .status-teletravail{background:var(--violet-soft);}
 
 .editable-txt{
@@ -376,6 +380,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .status-btn.st-presse.active{background:var(--gold-soft);}
 .status-btn.st-teletravail{color:var(--violet);}
 .status-btn.st-teletravail.active{background:var(--violet-soft);}
+.status-btn.st-maladie{color:var(--sky);}
+.status-btn.st-maladie.active{background:var(--sky-soft);}
 
 .time-block{display:none;}
 .time-block.show{display:block;}
@@ -530,11 +536,12 @@ const STATUS = {
   teletravail:{label:'Télétravail', cls:'status-teletravail'},
   off:    {label:'OFF',         cls:'status-off'},
   conge:  {label:'Congé',       cls:'status-conge'},
+  maladie:{label:'Maladie',     cls:'status-maladie'},
   mission:{label:'Missionnée',  cls:'status-mission'},
   presse: {label:'Presse',      cls:'status-presse'}
 };
-const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', off:'#D9534F', conge:'#3F8F5E', mission:'#DB8A2A', presse:'#C9A227'};
-const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', off:'FFFBE7E6', conge:'FFE4F3E8', mission:'FFFCEBD6', presse:'FFFAF1CE'};
+const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', off:'#D9534F', conge:'#3F8F5E', maladie:'#2F7FB5', mission:'#DB8A2A', presse:'#C9A227'};
+const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', off:'FFFBE7E6', conge:'FFE4F3E8', maladie:'FFE1EEF7', mission:'FFFCEBD6', presse:'FFFAF1CE'};
 /* Statuts qui affichent un horaire (début–fin) au lieu d'un simple libellé */
 function isWorkLike(status){ return status==='work' || status==='teletravail' || status==='mission'; }
 
@@ -943,7 +950,13 @@ function countOff(days){ return days.filter(c=>c.status==='off').length; }
 function countOffDay(di){ return data[currentProject].zones.filter(r=>r.days[di].status==='off').length; }
 function autoHeures(days){
   let total=0;
-  days.forEach(c=>{ if(isWorkLike(c.status) && c.start && c.end){ total += timeToMin(c.end)-timeToMin(c.start); } });
+  days.forEach(c=>{
+    if(isWorkLike(c.status) && c.start && c.end){
+      // Déduire 1h de pause déjeuner par journée travaillée
+      total += (timeToMin(c.end)-timeToMin(c.start)) - 60;
+    }
+  });
+  if(total<0) total=0;
   const h = Math.floor(total/60), m = total%60;
   return `${h}:${m.toString().padStart(2,'0')}:00`;
 }
@@ -1386,10 +1399,12 @@ async function exportExcel(hourOffset){
         r.days.forEach((c,di)=>{
           const sCell = row.getCell(C_DAY_START + di*2);
           const eCell = row.getCell(C_DAY_START + di*2 + 1);
+          // Planning complet : Congé et Maladie s'affichent comme OFF
+          const displayStatus = (c.status==='conge' || c.status==='maladie') ? 'off' : c.status;
           if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start, offset, true); eCell.value = fmtHeureExcel(c.end, offset, true); }
-          else { sCell.value = STATUS[c.status].label.toUpperCase(); eCell.value = STATUS[c.status].label.toUpperCase(); }
+          else { sCell.value = STATUS[displayStatus].label.toUpperCase(); eCell.value = STATUS[displayStatus].label.toUpperCase(); }
           [sCell,eCell].forEach(cell=>{
-            cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
+            cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[displayStatus]}};
             cell.alignment = {horizontal:'center'};
           });
         });
