@@ -26,6 +26,8 @@
   --amber-soft:#FCEBD6;
   --gold:#C9A227;
   --gold-soft:#FAF1CE;
+  --violet:#6C4FA8;
+  --violet-soft:#EBE5F7;
   --radius:10px;
   --shadow:0 8px 24px rgba(21,36,71,.10);
 }
@@ -281,6 +283,7 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .status-conge{background:var(--sage-soft);}
 .status-mission{background:var(--amber-soft);}
 .status-presse{background:var(--gold-soft);}
+.status-teletravail{background:var(--violet-soft);}
 
 .editable-txt{
   outline:none;
@@ -371,6 +374,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .status-btn.st-mission.active{background:var(--amber-soft);}
 .status-btn.st-presse{color:var(--gold);}
 .status-btn.st-presse.active{background:var(--gold-soft);}
+.status-btn.st-teletravail{color:var(--violet);}
+.status-btn.st-teletravail.active{background:var(--violet-soft);}
 
 .time-block{display:none;}
 .time-block.show{display:block;}
@@ -384,12 +389,25 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
   font-family:'IBM Plex Mono',monospace;
   color:var(--navy);font-weight:700;font-size:12.5px;
 }
-input[type=range]{
-  width:100%;
-  accent-color:var(--navy);
-  height:18px;
-  cursor:pointer;
+.time-btn-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:5px;
 }
+.time-btn{
+  border:1.5px solid var(--line);
+  background:#fff;
+  color:var(--navy);
+  border-radius:7px;
+  padding:6px 2px;
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:600;
+  font-size:11px;
+  cursor:pointer;
+  text-align:center;
+}
+.time-btn:hover{background:#F0F3FB;}
+.time-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
 .preview-track{
   height:8px;background:#E7E9F1;border-radius:5px;position:relative;margin:10px 0 6px 0;overflow:hidden;
 }
@@ -482,12 +500,12 @@ input[type=range]{
   <div class="time-block" id="timeBlock">
     <div class="preview-track"><div class="preview-fill" id="previewFill"></div></div>
     <div class="time-row">
-      <label>Début <span class="val" id="startVal">07:00</span></label>
-      <input type="range" id="startSlider" min="0" max="64" step="1">
+      <label>Début</label>
+      <div class="time-btn-grid" id="startBtnGrid"></div>
     </div>
     <div class="time-row">
-      <label>Fin <span class="val" id="endVal">16:00</span></label>
-      <input type="range" id="endSlider" min="0" max="64" step="1">
+      <label>Fin</label>
+      <div class="time-btn-grid" id="endBtnGrid"></div>
     </div>
   </div>
   <div class="pop-actions">
@@ -504,14 +522,17 @@ const DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche']
 const DATES = ['06 juillet 2026','07 juillet 2026','08 juillet 2026','09 juillet 2026','10 juillet 2026','11 juillet 2026','12 juillet 2026'];
 
 const STATUS = {
-  work:   {label:'Travail',    cls:''},
-  off:    {label:'OFF',        cls:'status-off'},
-  conge:  {label:'Congé',      cls:'status-conge'},
-  mission:{label:'Missionnée', cls:'status-mission'},
-  presse: {label:'Presse',     cls:'status-presse'}
+  work:   {label:'Travail',     cls:''},
+  teletravail:{label:'Télétravail', cls:'status-teletravail'},
+  off:    {label:'OFF',         cls:'status-off'},
+  conge:  {label:'Congé',       cls:'status-conge'},
+  mission:{label:'Missionnée',  cls:'status-mission'},
+  presse: {label:'Presse',      cls:'status-presse'}
 };
-const STATUS_COLOR = {work:'#1F7A6C', off:'#D9534F', conge:'#3F8F5E', mission:'#DB8A2A', presse:'#C9A227'};
-const STATUS_FILL_HEX = {work:'FFE4F2EF', off:'FFFBE7E6', conge:'FFE4F3E8', mission:'FFFCEBD6', presse:'FFFAF1CE'};
+const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', off:'#D9534F', conge:'#3F8F5E', mission:'#DB8A2A', presse:'#C9A227'};
+const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', off:'FFFBE7E6', conge:'FFE4F3E8', mission:'FFFCEBD6', presse:'FFFAF1CE'};
+/* Statuts qui affichent un horaire (début–fin) au lieu d'un simple libellé */
+function isWorkLike(status){ return status==='work' || status==='teletravail'; }
 
 function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
 function minToTime(m){ const h=Math.floor(m/60).toString().padStart(2,'0'); const mm=(m%60).toString().padStart(2,'0'); return h+':'+mm; }
@@ -720,7 +741,7 @@ PROJECTS.forEach(pk=>{
 
 /* ---------------- RENDER HELPERS ---------------- */
 function barFillStyle(cellData, colorHex){
-  if(cellData.status!=='work' || !cellData.start || !cellData.end) return '';
+  if(!isWorkLike(cellData.status) || !cellData.start || !cellData.end) return '';
   const s = Math.max(timeToMin(cellData.start), DAY_MIN);
   const e = Math.min(timeToMin(cellData.end), DAY_MAX);
   const total = DAY_MAX - DAY_MIN;
@@ -731,10 +752,10 @@ function barFillStyle(cellData, colorHex){
 
 function shiftCellHTML(cellData, rowIdx, dayIdx, tableName, colorHex){
   const st = STATUS[cellData.status];
-  const inner = cellData.status==='work'
+  const inner = isWorkLike(cellData.status)
     ? `<div class="time-text">${cellData.start}–${cellData.end}</div>`
     : `<div class="status-text">${st.label}</div>`;
-  const bar = cellData.status==='work'
+  const bar = isWorkLike(cellData.status)
     ? `<div class="bar-track"><div class="bar-fill" style="${barFillStyle(cellData,colorHex)}"></div></div>`
     : '';
   return `<td class="shift-cell ${st.cls}" data-table="${tableName}" data-row="${rowIdx}" data-day="${dayIdx}">${inner}${bar}</td>`;
@@ -818,7 +839,7 @@ function completHeaderHTML(){
 }
 
 function completCellHTML(c){
-  if(c.status==='work') return `<td class="small-col">${c.start}</td><td class="small-col">${c.end}</td>`;
+  if(isWorkLike(c.status)) return `<td class="small-col">${c.start}</td><td class="small-col">${c.end}</td>`;
   const label = STATUS[c.status].label.toUpperCase();
   return `<td class="small-col" style="color:var(--rose);font-weight:700">${label}</td><td class="small-col" style="color:var(--rose);font-weight:700">${label}</td>`;
 }
@@ -852,7 +873,7 @@ function countOff(days){ return days.filter(c=>c.status==='off').length; }
 function countOffDay(di){ return data[currentProject].zones.filter(r=>r.days[di].status==='off').length; }
 function autoHeures(days){
   let total=0;
-  days.forEach(c=>{ if(c.status==='work' && c.start && c.end){ total += timeToMin(c.end)-timeToMin(c.start); } });
+  days.forEach(c=>{ if(isWorkLike(c.status) && c.start && c.end){ total += timeToMin(c.end)-timeToMin(c.start); } });
   const h = Math.floor(total/60), m = total%60;
   return `${h}:${m.toString().padStart(2,'0')}:00`;
 }
@@ -899,15 +920,14 @@ const backdrop = document.getElementById('backdrop');
 const popover = document.getElementById('popover');
 const statusGrid = document.getElementById('statusGrid');
 const timeBlock = document.getElementById('timeBlock');
-const startSlider = document.getElementById('startSlider');
-const endSlider = document.getElementById('endSlider');
-const startVal = document.getElementById('startVal');
-const endVal = document.getElementById('endVal');
+const startBtnGrid = document.getElementById('startBtnGrid');
+const endBtnGrid = document.getElementById('endBtnGrid');
 const previewFill = document.getElementById('previewFill');
 let current = null; // {table, row, day}
 
-function stepsFromMin(min){ return Math.round((min-DAY_MIN)/STEP); }
-function minFromSteps(steps){ return DAY_MIN + steps*STEP; }
+/* Boutons horaires fixes pour début / fin */
+const START_OPTIONS = ['7:00','8:00','9:00','10:00','11:00'];
+const END_OPTIONS = ['16:00','17:00','18:00','19:00','20:00'];
 
 function openPopover(td){
   const table = td.dataset.table, row = +td.dataset.row, day = +td.dataset.day;
@@ -925,18 +945,19 @@ function openPopover(td){
     btn.addEventListener('click', ()=>{
       const newStatus = btn.dataset.status;
       cell.status = newStatus;
-      if(newStatus==='work' && !cell.start){ cell.start='9:00'; cell.end='17:00'; }
+      const workLike = isWorkLike(newStatus);
+      if(workLike && !cell.start){ cell.start='8:00'; cell.end='17:00'; }
       statusGrid.querySelectorAll('.status-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      timeBlock.classList.toggle('show', newStatus==='work');
-      if(newStatus==='work') syncSliders(cell);
+      timeBlock.classList.toggle('show', workLike);
+      if(workLike) renderTimeButtons(cell);
       refreshCellDisplay();
     });
   });
 
-  const isWork = cell.status==='work';
+  const isWork = isWorkLike(cell.status);
   timeBlock.classList.toggle('show', isWork);
-  if(isWork) syncSliders(cell);
+  if(isWork) renderTimeButtons(cell);
 
   const rect = td.getBoundingClientRect();
   let top = rect.bottom + 10;
@@ -951,31 +972,43 @@ function openPopover(td){
   popover.classList.add('show');
 }
 
-function syncSliders(cell){
-  const sMin = timeToMin(cell.start||'9:00'), eMin = timeToMin(cell.end||'17:00');
-  startSlider.value = stepsFromMin(Math.max(sMin,DAY_MIN));
-  endSlider.value = stepsFromMin(Math.max(eMin,DAY_MIN));
-  startSlider.max = endSlider.max = Math.round((DAY_MAX-DAY_MIN)/STEP);
-  updateSliderLabels();
+function renderTimeButtons(cell){
+  startBtnGrid.innerHTML = START_OPTIONS.map(t=>
+    `<button type="button" class="time-btn ${cell.start===t?'active':''}" data-role="start" data-time="${t}">${t}</button>`
+  ).join('');
+  endBtnGrid.innerHTML = END_OPTIONS.map(t=>
+    `<button type="button" class="time-btn ${cell.end===t?'active':''}" data-role="end" data-time="${t}">${t}</button>`
+  ).join('');
+
+  startBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      cell.start = btn.dataset.time;
+      startBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePreviewFill(cell);
+      refreshCellDisplay();
+    });
+  });
+  endBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      cell.end = btn.dataset.time;
+      endBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePreviewFill(cell);
+      refreshCellDisplay();
+    });
+  });
+
+  updatePreviewFill(cell);
 }
 
-function updateSliderLabels(){
-  let sSteps = +startSlider.value, eSteps = +endSlider.value;
-  if(eSteps <= sSteps){ eSteps = sSteps+1; endSlider.value = eSteps; }
-  const sMin = minFromSteps(sSteps), eMin = minFromSteps(eSteps);
-  startVal.textContent = minToTime(sMin);
-  endVal.textContent = minToTime(eMin);
+function updatePreviewFill(cell){
+  if(!cell.start || !cell.end){ previewFill.style.width='0%'; return; }
+  const sMin = timeToMin(cell.start), eMin = timeToMin(cell.end);
   const total = DAY_MAX-DAY_MIN;
-  previewFill.style.left = ((sMin-DAY_MIN)/total*100)+'%';
+  previewFill.style.left = (((sMin-DAY_MIN)/total)*100)+'%';
   previewFill.style.width = Math.max(((eMin-sMin)/total*100),2)+'%';
-  if(current){
-    const cell = getTable(current.table)[current.row].days[current.day];
-    if(cell.status==='work'){ cell.start = minToTime(sMin); cell.end = minToTime(eMin); }
-  }
 }
-
-startSlider.addEventListener('input', ()=>{ updateSliderLabels(); refreshCellDisplay(); });
-endSlider.addEventListener('input', ()=>{ updateSliderLabels(); refreshCellDisplay(); });
 
 function refreshCellDisplay(){
   if(!current) return;
@@ -1063,137 +1096,217 @@ document.querySelectorAll('#subtabsBar .tab').forEach(tab=>{
 document.getElementById('addRowBtn').addEventListener('click', ()=>{
   if(currentProject==='complet') return;
   const blankDays = () => Array.from({length:7},()=>({status:'off',start:null,end:null}));
+  /* Pour tous les projets sauf Google Leads : entrée/sortie par défaut
+     lundi-jeudi 8:00-18:00, vendredi 8:00-17:00, week-end OFF. */
+  const defaultWorkDays = () => ([
+    {status:'work', start:'8:00', end:'18:00'},
+    {status:'work', start:'8:00', end:'18:00'},
+    {status:'work', start:'8:00', end:'18:00'},
+    {status:'work', start:'8:00', end:'18:00'},
+    {status:'work', start:'8:00', end:'17:00'},
+    {status:'off', start:null, end:null},
+    {status:'off', start:null, end:null}
+  ]);
+  const initDays = () => (currentProject==='googleleads' || currentSubtab==='pause') ? blankDays() : defaultWorkDays();
   const proj = data[currentProject];
-  if(currentSubtab==='managers') proj.managers.push({zone:'ZONE1', role:'Manager', name:'Nouveau manager', days:blankDays(), comment:''});
-  else if(currentSubtab==='pause') proj.pause.push({zone:'ZONE1', name:'Nouveau collaborateur', days:blankDays()});
-  else proj.zones.push({zone:'ZONE1', name:'Nouveau collaborateur', days:blankDays(), heures:'0:00:00', comment:''});
+  if(currentSubtab==='managers') proj.managers.push({zone:'ZONE1', role:'Manager', name:'Nouveau manager', days:initDays(), comment:''});
+  else if(currentSubtab==='pause') proj.pause.push({zone:'ZONE1', name:'Nouveau collaborateur', days:initDays()});
+  else proj.zones.push({zone:'ZONE1', name:'Nouveau collaborateur', days:initDays(), heures:'0:00:00', comment:''});
   renderAll();
 });
 
 /* ---------------- EXPORT EXCEL ---------------- */
+function fmtHeureExcel(t){
+  if(!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  const hh = h.toString().padStart(2,'0');
+  return (m && m!==0) ? `${hh}H${m.toString().padStart(2,'0')}` : `${hh}H`;
+}
+
 async function exportExcel(){
   const wb = new ExcelJS.Workbook();
-  const weekLabel = document.getElementById('weekBadge').innerText.trim() + ' ' + document.getElementById('yearBadge').innerText.trim();
+  const weekTxt = document.getElementById('weekBadge').innerText.trim();
+  const yearTxt = document.getElementById('yearBadge').innerText.trim();
+  const weekLabel = weekTxt + ' ' + yearTxt;
 
-  function buildSheet(name, rows, opts){
-    const ws = wb.addWorksheet(name.substring(0,31));
-    const hasExtra = !!opts.extra;
-    const dayColsStart = 3;
-    const dayColsEnd = 2 + 7*2;
-    const extraStart = dayColsEnd+1;
-    const totalCols = hasExtra ? extraStart+2 : dayColsEnd;
+  const DAY_COLS_START = 3;
+  const DAY_COLS_END = 2 + 7*2;
+  const EXTRA_START = DAY_COLS_END + 1;
+  const TOTAL_COLS_EXTRA = EXTRA_START + 2;
+  const TOTAL_COLS_NOEXTRA = DAY_COLS_END;
 
-    ws.mergeCells(1,1,1,totalCols);
-    const titleCell = ws.getCell(1,1);
-    titleCell.value = weekLabel + ' — ' + name;
-    titleCell.font = {bold:true, color:{argb:'FFFFFFFF'}, size:13};
-    titleCell.alignment = {horizontal:'center'};
-    titleCell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF152447'}};
-
-    ws.mergeCells(2,1,3,1);
-    ws.mergeCells(2,2,3,2);
-    ws.getCell(2,1).value = 'Zones';
-    ws.getCell(2,2).value = opts.nameLabel;
-    DAYS.forEach((dn,i)=>{
-      const c1 = dayColsStart + i*2;
-      ws.mergeCells(2,c1,2,c1+1);
-      ws.getCell(2,c1).value = (dn.charAt(0).toUpperCase()+dn.slice(1)) + ' ' + DATES[i];
-      ws.getCell(3,c1).value = 'Début de shift';
-      ws.getCell(3,c1+1).value = 'Fin de shift';
-    });
-    if(hasExtra){
-      ws.mergeCells(2,extraStart,3,extraStart);
-      ws.mergeCells(2,extraStart+1,3,extraStart+1);
-      ws.mergeCells(2,extraStart+2,3,extraStart+2);
-      ws.getCell(2,extraStart).value='OFF';
-      ws.getCell(2,extraStart+1).value='NB heures';
-      ws.getCell(2,extraStart+2).value='Commentaires';
-    }
-    [ws.getRow(2), ws.getRow(3)].forEach(headerRow=>{
-      headerRow.eachCell({includeEmpty:true}, c=>{
-        c.font={bold:true,color:{argb:'FFFFFFFF'}};
-        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}};
-        c.alignment={horizontal:'center',vertical:'middle'};
-        c.border={bottom:{style:'thin'}};
-      });
-    });
-
-    rows.forEach((r,ri)=>{
-      const row = ws.getRow(4+ri);
-      row.getCell(1).value = r.zone;
-      row.getCell(2).value = r.role ? `${r.role} ${r.name}`.trim() : r.name;
-      r.days.forEach((c,di)=>{
-        const startCell = row.getCell(dayColsStart + di*2);
-        const endCell = row.getCell(dayColsStart + di*2 + 1);
-        if(c.status==='work'){ startCell.value = c.start; endCell.value = c.end; }
-        else { startCell.value = STATUS[c.status].label.toUpperCase(); endCell.value = STATUS[c.status].label.toUpperCase(); }
-        [startCell,endCell].forEach(cell=>{
-          cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
-          cell.font = {color:{argb: c.status==='off' ? 'FFD9534F' : 'FF1B2130'}, bold: c.status!=='work'};
-          cell.alignment={horizontal:'center'};
-        });
-      });
-      if(hasExtra){
-        row.getCell(extraStart).value = countOff(r.days);
-        row.getCell(extraStart+1).value = r.heures || autoHeures(r.days);
-        row.getCell(extraStart+2).value = r.comment || '';
-      }
-      row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
-    });
-
-    ws.getColumn(1).width=12; ws.getColumn(2).width=26;
-    for(let i=dayColsStart;i<=dayColsEnd;i++) ws.getColumn(i).width=11;
-    if(hasExtra){ ws.getColumn(extraStart).width=8; ws.getColumn(extraStart+1).width=12; ws.getColumn(extraStart+2).width=22; }
-  }
-
-  function buildStatsSheet(name, statsObj){
-    const ws = wb.addWorksheet(name.substring(0,31));
-    const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
-    ws.getRow(1).values = ['Indicateur', ...DAYS];
-    ws.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}}; });
-    labels.forEach(([key,label],i)=>{ ws.getRow(2+i).values = [label, ...statsObj[key]]; });
-    ws.getColumn(1).width=18;
-  }
-
-  PROJECTS.forEach(pk=>{
+  function buildCombinedSheet(pk){
     const proj = data[pk];
     const lbl = PROJECT_LABELS[pk];
-    buildSheet(`${lbl} - Managers`, proj.managers, {nameLabel:'Managers et GF', extra:true});
-    buildSheet(`${lbl} - Pause`, proj.pause, {nameLabel:'Collaborateur', extra:false});
-    buildSheet(`${lbl} - Zones`, proj.zones, {nameLabel:'Collaborateur', extra:true});
-    buildStatsSheet(`${lbl} - Synthese`, proj.stats);
+    const ws = wb.addWorksheet(lbl.substring(0,31));
+    let rowCursor = 1;
+
+    function sectionTitle(text, span){
+      ws.mergeCells(rowCursor,1,rowCursor,span);
+      const c = ws.getCell(rowCursor,1);
+      c.value = text;
+      c.font = {bold:true, color:{argb:'FFFFFFFF'}, size:12};
+      c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF152447'}};
+      c.alignment = {horizontal:'center'};
+      rowCursor++;
+    }
+
+    function writeTable(rows, opts){
+      const hasExtra = !!opts.extra;
+      const headRow1 = rowCursor, headRow2 = rowCursor+1;
+      ws.mergeCells(headRow1,1,headRow2,1);
+      ws.mergeCells(headRow1,2,headRow2,2);
+      ws.getCell(headRow1,1).value = 'Zone';
+      ws.getCell(headRow1,2).value = opts.nameLabel;
+      DAYS.forEach((dn,i)=>{
+        const c1 = DAY_COLS_START + i*2;
+        ws.mergeCells(headRow1,c1,headRow1,c1+1);
+        ws.getCell(headRow1,c1).value = (dn.charAt(0).toUpperCase()+dn.slice(1)) + ' ' + DATES[i];
+        ws.getCell(headRow2,c1).value = 'Début';
+        ws.getCell(headRow2,c1+1).value = 'Fin';
+      });
+      if(hasExtra){
+        ws.mergeCells(headRow1,EXTRA_START,headRow2,EXTRA_START);
+        ws.mergeCells(headRow1,EXTRA_START+1,headRow2,EXTRA_START+1);
+        ws.mergeCells(headRow1,EXTRA_START+2,headRow2,EXTRA_START+2);
+        ws.getCell(headRow1,EXTRA_START).value = 'OFF';
+        ws.getCell(headRow1,EXTRA_START+1).value = 'Heures';
+        ws.getCell(headRow1,EXTRA_START+2).value = 'Commentaires';
+      }
+      [ws.getRow(headRow1), ws.getRow(headRow2)].forEach(hr=>{
+        hr.eachCell({includeEmpty:true}, c=>{
+          c.font={bold:true,color:{argb:'FFFFFFFF'}};
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}};
+          c.alignment={horizontal:'center',vertical:'middle'};
+          c.border={bottom:{style:'thin'}};
+        });
+      });
+      rowCursor = headRow2 + 1;
+      if(rows.length===0){
+        const row = ws.getRow(rowCursor);
+        row.getCell(1).value = '—';
+        rowCursor++;
+      }
+      rows.forEach(r=>{
+        const row = ws.getRow(rowCursor);
+        row.getCell(1).value = r.zone;
+        row.getCell(2).value = r.role ? `${r.role} ${r.name}`.trim() : r.name;
+        r.days.forEach((c,di)=>{
+          const sCell = row.getCell(DAY_COLS_START + di*2);
+          const eCell = row.getCell(DAY_COLS_START + di*2 + 1);
+          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start); eCell.value = fmtHeureExcel(c.end); }
+          else { sCell.value = STATUS[c.status].label.toUpperCase(); eCell.value = STATUS[c.status].label.toUpperCase(); }
+          [sCell,eCell].forEach(cell=>{
+            cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
+            cell.font = {color:{argb: c.status==='off' ? 'FFD9534F' : 'FF1B2130'}, bold: !isWorkLike(c.status)};
+            cell.alignment = {horizontal:'center'};
+          });
+        });
+        if(hasExtra){
+          row.getCell(EXTRA_START).value = countOff(r.days);
+          row.getCell(EXTRA_START+1).value = r.heures || autoHeures(r.days);
+          row.getCell(EXTRA_START+2).value = r.comment || '';
+        }
+        row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
+        rowCursor++;
+      });
+      rowCursor += 2;
+    }
+
+    function writeStats(){
+      const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
+      ws.getRow(rowCursor).values = ['Indicateur', ...DAYS];
+      ws.getRow(rowCursor).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}}; });
+      rowCursor++;
+      labels.forEach(([key,label])=>{
+        ws.getRow(rowCursor).values = [label, ...proj.stats[key]];
+        rowCursor++;
+      });
+      ws.getRow(rowCursor).values = ['NB OFF (auto)', ...DAYS.map((dn,di)=>proj.zones.filter(r=>r.days[di].status==='off').length)];
+      rowCursor++;
+    }
+
+    sectionTitle('PLANNING ZONES — ' + lbl, TOTAL_COLS_EXTRA);
+    writeTable(proj.zones, {nameLabel:'Collaborateur', extra:true});
+
+    sectionTitle('PLANNING PAUSE DÉJEUNER', TOTAL_COLS_NOEXTRA);
+    writeTable(proj.pause, {nameLabel:'Collaborateur', extra:false});
+
+    sectionTitle('MANAGERS ET GF', TOTAL_COLS_EXTRA);
+    writeTable(proj.managers, {nameLabel:'Managers et GF', extra:true});
+
+    sectionTitle('SYNTHÈSE JOURNALIÈRE', 8);
+    writeStats();
+
+    ws.getColumn(1).width = 12; ws.getColumn(2).width = 26;
+    for(let i=DAY_COLS_START;i<=DAY_COLS_END;i++) ws.getColumn(i).width = 10;
+    ws.getColumn(EXTRA_START).width = 8; ws.getColumn(EXTRA_START+1).width = 11; ws.getColumn(EXTRA_START+2).width = 24;
+  }
+
+  PROJECTS.forEach(pk=> buildCombinedSheet(pk));
+
+  /* ---- Planning complet : tous les champs, colonnes d'identité vides à remplir ---- */
+  const wsC = wb.addWorksheet('Planning complet');
+  const identityHeaders = ['Semaine','Matricule','NOM','PRENOM','NOM COMPLET',"Date d'embauche",'Activité','N° de téléphone','Ville','Point de repère','Zone'];
+  const dayHeaders = DAYS.flatMap(dn=>{
+    const short = dn.charAt(0).toUpperCase()+dn.slice(1,3)+'.';
+    return [short+' Entrée', short+' Sortie'];
+  });
+  wsC.getRow(1).values = [...identityHeaders, ...dayHeaders, 'OFF','Heures','Commentaires'];
+  wsC.getRow(1).eachCell(c=>{
+    c.font={bold:true,color:{argb:'FFFFFFFF'}};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152447'}};
+    c.alignment={horizontal:'center',vertical:'middle'};
   });
 
-  // Planning complet — toutes activités
-  const wsC = wb.addWorksheet('Planning complet');
-  wsC.getRow(1).values = ['Activité','Zone','Collaborateur', ...DAYS.flatMap(dn=>[dn.charAt(0).toUpperCase()+dn.slice(1)+' - Entrée', dn.charAt(0).toUpperCase()+dn.slice(1)+' - Sortie']), 'OFF','Heures','Commentaires'];
-  wsC.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152447'}}; c.alignment={horizontal:'center'}; });
-  let rIdx=2;
+  const ID_COLS = identityHeaders.length;      // 11
+  const C_DAY_START = ID_COLS + 1;             // 12
+  const C_DAY_END = ID_COLS + 7*2;             // 25
+  const C_OFF = C_DAY_END + 1;
+  const C_HEURES = C_DAY_END + 2;
+  const C_COMMENT = C_DAY_END + 3;
+
+  let rIdx = 2;
   PROJECTS.forEach(pk=>{
     const proj = data[pk];
     const lbl = PROJECT_LABELS[pk];
     ['managers','zones'].forEach(sec=>{
       proj[sec].forEach(r=>{
         const row = wsC.getRow(rIdx++);
-        row.getCell(1).value = lbl;
-        row.getCell(2).value = r.zone;
-        row.getCell(3).value = (r.role?r.role+' ':'')+r.name;
+        row.getCell(1).value = weekTxt;                                  // Semaine (auto)
+        row.getCell(2).value = '';                                       // Matricule — à remplir
+        row.getCell(3).value = '';                                       // NOM — à remplir
+        row.getCell(4).value = '';                                       // PRENOM — à remplir
+        row.getCell(5).value = (r.role ? r.role+' ' : '') + r.name;      // NOM COMPLET (auto)
+        row.getCell(6).value = '';                                       // Date d'embauche — à remplir
+        row.getCell(7).value = lbl;                                      // Activité (auto)
+        row.getCell(8).value = '';                                       // N° téléphone — à remplir
+        row.getCell(9).value = '';                                       // Ville — à remplir
+        row.getCell(10).value = '';                                      // Point de repère — à remplir
+        row.getCell(11).value = r.zone;                                  // Zone (auto)
         r.days.forEach((c,di)=>{
-          const sCell = row.getCell(4+di*2), eCell = row.getCell(5+di*2);
-          if(c.status==='work'){ sCell.value=c.start; eCell.value=c.end; }
-          else { sCell.value=STATUS[c.status].label.toUpperCase(); eCell.value=STATUS[c.status].label.toUpperCase(); }
-          [sCell,eCell].forEach(cell=>{ cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:STATUS_FILL_HEX[c.status]}}; cell.alignment={horizontal:'center'}; });
+          const sCell = row.getCell(C_DAY_START + di*2);
+          const eCell = row.getCell(C_DAY_START + di*2 + 1);
+          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start); eCell.value = fmtHeureExcel(c.end); }
+          else { sCell.value = STATUS[c.status].label.toUpperCase(); eCell.value = STATUS[c.status].label.toUpperCase(); }
+          [sCell,eCell].forEach(cell=>{
+            cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
+            cell.alignment = {horizontal:'center'};
+          });
         });
-        row.getCell(18).value = countOff(r.days);
-        row.getCell(19).value = r.heures || autoHeures(r.days);
-        row.getCell(20).value = r.comment || '';
+        row.getCell(C_OFF).value = countOff(r.days);
+        row.getCell(C_HEURES).value = r.heures || autoHeures(r.days);
+        row.getCell(C_COMMENT).value = r.comment || '';
         row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
       });
     });
   });
-  wsC.getColumn(1).width=16; wsC.getColumn(2).width=11; wsC.getColumn(3).width=26;
-  for(let i=4;i<=17;i++) wsC.getColumn(i).width=10;
-  wsC.getColumn(18).width=7; wsC.getColumn(19).width=11; wsC.getColumn(20).width=22;
+
+  wsC.getColumn(1).width=8; wsC.getColumn(2).width=12; wsC.getColumn(3).width=16; wsC.getColumn(4).width=16;
+  wsC.getColumn(5).width=26; wsC.getColumn(6).width=14; wsC.getColumn(7).width=14; wsC.getColumn(8).width=15;
+  wsC.getColumn(9).width=16; wsC.getColumn(10).width=28; wsC.getColumn(11).width=11;
+  for(let i=C_DAY_START;i<=C_DAY_END;i++) wsC.getColumn(i).width=9;
+  wsC.getColumn(C_OFF).width=7; wsC.getColumn(C_HEURES).width=11; wsC.getColumn(C_COMMENT).width=22;
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -1204,6 +1317,7 @@ async function exportExcel(){
   URL.revokeObjectURL(url);
 }
 document.getElementById('exportBtn').addEventListener('click', exportExcel);
+
 
 /* ---------------- INIT ---------------- */
 renderAll();
