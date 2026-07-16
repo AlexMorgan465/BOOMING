@@ -839,7 +839,12 @@ async function exportExcel(){
   function buildSheet(name, rows, opts){
     const ws = wb.addWorksheet(name);
     const hasExtra = !!opts.extra;
-    const totalCols = 2 + 7 + (hasExtra? 4:1);
+    const dayColsStart = 3;          // col 3 = first "Debut de shift"
+    const dayColsEnd = 2 + 7*2;      // 2 cols per day, 7 days
+    const extraStart = dayColsEnd+1;
+    const totalCols = hasExtra ? extraStart+2 : dayColsEnd;
+
+    // Row 1: week banner
     ws.mergeCells(1,1,1,totalCols);
     const titleCell = ws.getCell(1,1);
     titleCell.value = weekLabel;
@@ -847,38 +852,61 @@ async function exportExcel(){
     titleCell.alignment = {horizontal:'center'};
     titleCell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF152447'}};
 
-    const headerRow = ws.getRow(2);
-    headerRow.getCell(1).value = 'Zones';
-    headerRow.getCell(2).value = opts.nameLabel;
-    DAYS.forEach((dn,i)=>{ headerRow.getCell(3+i).value = dn.charAt(0).toUpperCase()+dn.slice(1)+' '+DATES[i]; });
+    // Row 2/3: Zone / Collaborateur (merged vertically) + one merged header per day (spans 2 cols) with Début/Fin sub-row
+    ws.mergeCells(2,1,3,1);
+    ws.mergeCells(2,2,3,2);
+    ws.getCell(2,1).value = 'Zones';
+    ws.getCell(2,2).value = opts.nameLabel;
+    DAYS.forEach((dn,i)=>{
+      const c1 = dayColsStart + i*2;
+      ws.mergeCells(2,c1,2,c1+1);
+      ws.getCell(2,c1).value = (dn.charAt(0).toUpperCase()+dn.slice(1)) + ' ' + DATES[i];
+      ws.getCell(3,c1).value = 'Début de shift';
+      ws.getCell(3,c1+1).value = 'Fin de shift';
+    });
     if(hasExtra){
-      headerRow.getCell(10).value='OFF'; headerRow.getCell(11).value='NB heures'; headerRow.getCell(12).value='Commentaires';
+      ws.mergeCells(2,extraStart,3,extraStart);
+      ws.mergeCells(2,extraStart+1,3,extraStart+1);
+      ws.mergeCells(2,extraStart+2,3,extraStart+2);
+      ws.getCell(2,extraStart).value='OFF';
+      ws.getCell(2,extraStart+1).value='NB heures';
+      ws.getCell(2,extraStart+2).value='Commentaires';
     }
-    headerRow.eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}}; c.alignment={horizontal:'center',vertical:'middle'}; c.border={bottom:{style:'thin'}}; });
+    [ws.getRow(2), ws.getRow(3)].forEach(headerRow=>{
+      headerRow.eachCell({includeEmpty:true}, c=>{
+        c.font={bold:true,color:{argb:'FFFFFFFF'}};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}};
+        c.alignment={horizontal:'center',vertical:'middle'};
+        c.border={bottom:{style:'thin'}};
+      });
+    });
 
     rows.forEach((r,ri)=>{
-      const row = ws.getRow(3+ri);
+      const row = ws.getRow(4+ri);
       row.getCell(1).value = r.zone;
       row.getCell(2).value = opts.nameLabel==='Managers et GF' ? `${r.role||''} ${r.name}`.trim() : r.name;
       r.days.forEach((c,di)=>{
-        const cell = row.getCell(3+di);
-        if(c.status==='work'){ cell.value = `${c.start} - ${c.end}`; }
-        else { cell.value = STATUS[c.status].label.toUpperCase(); }
-        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
-        cell.font = {color:{argb: c.status==='off' ? 'FFD9534F' : 'FF1B2130'}, bold: c.status!=='work'};
-        cell.alignment={horizontal:'center'};
+        const startCell = row.getCell(dayColsStart + di*2);
+        const endCell = row.getCell(dayColsStart + di*2 + 1);
+        if(c.status==='work'){ startCell.value = c.start; endCell.value = c.end; }
+        else { startCell.value = STATUS[c.status].label.toUpperCase(); endCell.value = STATUS[c.status].label.toUpperCase(); }
+        [startCell,endCell].forEach(cell=>{
+          cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
+          cell.font = {color:{argb: c.status==='off' ? 'FFD9534F' : 'FF1B2130'}, bold: c.status!=='work'};
+          cell.alignment={horizontal:'center'};
+        });
       });
       if(hasExtra){
-        row.getCell(10).value = countOff(r.days);
-        row.getCell(11).value = r.heures || autoHeures(r.days);
-        row.getCell(12).value = r.comment || '';
+        row.getCell(extraStart).value = countOff(r.days);
+        row.getCell(extraStart+1).value = r.heures || autoHeures(r.days);
+        row.getCell(extraStart+2).value = r.comment || '';
       }
-      row.eachCell(c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
+      row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
     });
 
     ws.getColumn(1).width=12; ws.getColumn(2).width=26;
-    for(let i=3;i<=9;i++) ws.getColumn(i).width=16;
-    if(hasExtra){ ws.getColumn(10).width=8; ws.getColumn(11).width=12; ws.getColumn(12).width=22; }
+    for(let i=dayColsStart;i<=dayColsEnd;i++) ws.getColumn(i).width=11;
+    if(hasExtra){ ws.getColumn(extraStart).width=8; ws.getColumn(extraStart+1).width=12; ws.getColumn(extraStart+2).width=22; }
   }
 
   buildSheet('Managers et GF', managers, {nameLabel:'Managers et GF', extra:true});
