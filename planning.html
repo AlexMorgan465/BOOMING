@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planning S29 — Éditeur</title>
+<title>Planning multi-activités — Éditeur</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -95,6 +95,7 @@ body{
 .btn-ghost{background:rgba(255,255,255,.12);color:#fff;}
 .btn-ghost:hover{background:rgba(255,255,255,.22);}
 .btn-small{padding:6px 10px;font-size:12px;border-radius:7px;}
+.btn[disabled]{opacity:.35;cursor:not-allowed;}
 
 .tabs{
   display:flex;
@@ -102,10 +103,11 @@ body{
   padding:14px 24px 0 24px;
   background:var(--paper);
   position:sticky;
-  top:74px;
   z-index:35;
   flex-wrap:wrap;
 }
+.proj-tabs{ top:74px; padding-top:16px; }
+.subtabs{ top:126px; padding-top:6px; }
 .tab{
   padding:10px 18px;
   border-radius:10px 10px 0 0;
@@ -122,6 +124,10 @@ body{
   color:var(--navy);
   border-color:var(--line);
 }
+.proj-tabs .tab{font-size:14.5px;}
+.proj-tabs .tab.tab-complet{color:var(--gold);}
+.proj-tabs .tab.tab-complet.active{color:var(--navy);border-color:var(--gold);box-shadow:inset 0 2px 0 var(--gold);}
+.subtabs .tab{font-size:12.5px;padding:8px 15px;}
 
 .panel{
   padding:18px 24px 60px 24px;
@@ -164,6 +170,7 @@ table.plan{
   min-width:1180px;
   font-size:13px;
 }
+table.plan.complet{min-width:1520px;}
 table.plan thead th{
   background:#F7F8FC;
   color:var(--navy);
@@ -303,6 +310,12 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .stat-table th{background:#F7F8FC;color:var(--navy);text-align:left;font-size:11px;text-transform:uppercase;}
 .stat-table td.editable-txt{text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600;}
 
+.activite-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;
+  background:var(--navy);color:#fff;white-space:nowrap;
+}
+
 /* Popover editor */
 .backdrop{
   position:fixed;inset:0;
@@ -392,13 +405,22 @@ input[type=range]{
 <body>
 
 <div class="appbar">
-  <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S29</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
+  <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S28</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
   <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
   <button class="btn btn-primary" id="exportBtn">⬇ Exporter en Excel</button>
-  <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build fix-cellules-indépendantes-v2</div>
+  <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build multi-activités-v1</div>
 </div>
 
-<div class="tabs">
+<div class="tabs proj-tabs" id="projTabs">
+  <div class="tab active" data-project="googleleads">Google Leads</div>
+  <div class="tab" data-project="accessibilite">Accessibilité</div>
+  <div class="tab" data-project="afedim">AFEDIM</div>
+  <div class="tab" data-project="cmleasing">CM Leasing</div>
+  <div class="tab" data-project="glf">GLF</div>
+  <div class="tab tab-complet" data-project="complet">📊 Planning complet</div>
+</div>
+
+<div class="tabs subtabs" id="subtabsBar">
   <div class="tab active" data-tab="managers">Managers &amp; GF</div>
   <div class="tab" data-tab="pause">Pause déjeuner</div>
   <div class="tab" data-tab="zones">Planning zones</div>
@@ -440,6 +462,16 @@ input[type=range]{
     </div>
   </div>
 
+  <div class="tabview" id="view-complet">
+    <div class="card">
+      <div class="card-head">
+        <h2>Planning complet — toutes les activités</h2>
+        <div class="hint">Vue en lecture seule, recalculée automatiquement à partir des plannings Managers &amp; GF + Planning zones de chaque activité</div>
+      </div>
+      <div class="table-scroll"><table class="plan complet" id="table-complet"></table></div>
+    </div>
+  </div>
+
 </div>
 
 <div class="backdrop" id="backdrop"></div>
@@ -469,7 +501,7 @@ const DAY_MIN = 6*60;      // 06:00
 const DAY_MAX = 22*60;     // 22:00
 const STEP = 15;           // minutes
 const DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
-const DATES = ['13 juillet 2026','14 juillet 2026','15 juillet 2026','16 juillet 2026','17 juillet 2026','18 juillet 2026','19 juillet 2026'];
+const DATES = ['06 juillet 2026','07 juillet 2026','08 juillet 2026','09 juillet 2026','10 juillet 2026','11 juillet 2026','12 juillet 2026'];
 
 const STATUS = {
   work:   {label:'Travail',    cls:''},
@@ -493,14 +525,24 @@ function zoneColor(zone){
   return palette[h % palette.length];
 }
 
-/* ---------------- DATA ---------------- */
-let managers = [
+/* ---------------- PROJECTS ---------------- */
+const PROJECTS = ['googleleads','accessibilite','afedim','cmleasing','glf'];
+const PROJECT_LABELS = {
+  googleleads:'Google Leads',
+  accessibilite:'Accessibilité',
+  afedim:'AFEDIM',
+  cmleasing:'CM Leasing',
+  glf:'GLF'
+};
+
+/* ---------------- DATA : Google Leads (activité déjà construite) ---------------- */
+const gl_managers = [
   {zone:'ZONE8', role:'Manager', name:'OUAQERROUCH NOUR-EL HOUDA', days:[CONGE,CONGE,w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),OFF,OFF], comment:'RAS'},
   {zone:'ZONE8', role:'GF', name:'ARBOUBBA OUMAIMA', days:[w('7:00','16:00'),w('7:00','11:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),OFF,OFF], comment:'RAS'},
   {zone:'ZONE4', role:'Manager', name:'HAOUACH Ikram', days:[w('7:00','16:00'),OFF,w('10:00','20:00'),w('10:00','20:00'),OFF,w('7:00','16:00'),w('13:00','20:00')], comment:'RAS'}
 ];
 
-let pause = [
+const gl_pause = [
   {zone:'ZONE7', name:'EL AOUAQUI Bouchra', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
   {zone:'ZONE4', name:'IHASSANE Ikram', days:[MISSION,MISSION,MISSION,MISSION,MISSION,MISSION,w('12:00','13:00')]},
   {zone:'ZONE5', name:'NIANG NDEYE ABSA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
@@ -535,7 +577,7 @@ let pause = [
   {zone:'ZONE3', name:'SOUOUD ZAKARIA', days:[w('14:00','15:00'),OFF,OFF,w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]}
 ];
 
-let zones = [
+const gl_zones = [
   {zone:'ZONE7', name:'EL-AOUAQUI Bouchra', days:[w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
   {zone:'ZONE4', name:'IHASSANE Ikram', days:[MISSION,MISSION,MISSION,MISSION,MISSION,MISSION,w('7:00','17:00')], heures:'9:00:00', comment:'Missionnée Mention BAC'},
   {zone:'ZONE5', name:'NIANG NDEYE ABSA', days:[w('10:00','20:00'),w('11:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
@@ -570,13 +612,97 @@ let zones = [
   {zone:'ZONE3', name:'SOUOUD ZAKARIA', days:[w('10:00','20:00'),OFF,OFF,w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF], heures:'44:00:00', comment:'RAS'}
 ];
 
-let stats = {
+const gl_stats = {
   ouverture:[12,6,13,15,14,6,5],
   renfort:[3,0,0,0,0,0,0],
   middle:[3,7,1,4,5,0,0],
   middlePlus:[0,0,0,0,0,0,0],
   fermeture:[8,7,8,9,8,7,4]
 };
+
+/* ---------------- DATA : Accessibilité ---------------- */
+const ac_managers = [
+  {zone:'ZONE7', role:'Manager', name:'OUBRAHIM MOHAMMED', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'}
+];
+const ac_pause = [];
+const ac_zones = [
+  {zone:'ZONE6', name:'LISSAOUI HIBA', days:[w('8:00','18:00'),OFF,OFF,w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'26:00:00', comment:'Congé payé'},
+  {zone:'ZONE5', name:'RMAIDI IMAD', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'Télétravail'},
+  {zone:'ZONE4', name:'HAMDANI MOHAMED', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
+];
+const ac_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
+/* ---------------- DATA : AFEDIM ---------------- */
+const af_managers = [
+  {zone:'ZONE7', role:'Manager', name:'HMIDOUCH FOUAD', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'}
+];
+const af_pause = [];
+const af_zones = [
+  {zone:'ZONE4', name:'RADGUI SARA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'BOUMEZGANE SOUKAINA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'BENHAMMOU ALAE EDDINE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'SIMOUR KHALIL', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'EL MASSAOUDI Houssam', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'EL JEBBOURI OMAR', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
+];
+const af_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
+/* ---------------- DATA : CM Leasing ---------------- */
+const cm_managers = [];
+const cm_pause = [];
+const cm_zones = [
+  {zone:'ZONE5', name:'AIT RABIAA NOUHAILA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'EL MAHJOUBI ABDESSATAR', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'IDELHAJ Meriem', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'LEHMOUCH NOUHAILA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'NOUIBI CHAIMAE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE2', name:'ESSABERY ISMAIL', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'AKHSASS MAJDA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE2', name:'JALAL NABILA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'LAKHAL MEHDI', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'SAADA LINA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'HMIDI KHADIJA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'ELOUAHHABY DOUAAE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
+];
+const cm_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
+/* ---------------- DATA : GLF ---------------- */
+const gf_managers = [];
+const gf_pause = [
+  {zone:'ZONE1', name:'BARA HAJAR', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
+  {zone:'ZONE4', name:'EL MOUBARIK OUMNIA', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
+  {zone:'ZONE3', name:'DAMI OUMAIMA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'INTAJ IMANE', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]}
+];
+const gf_zones = [
+  {zone:'ZONE8', name:'TAOUIL AYA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE8', name:'MBENE GUEYE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'ZERZOURI LAMIAE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'ALAMI-AROUSSI AHMED', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'ES-SAHLI MARYAM', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE7', name:'SY FATIMA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE1', name:'BARA HAJAR', days:[w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','16:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 12h-12h30)'},
+  {zone:'ZONE4', name:'EL MOUBARIK OUMNIA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),w('8:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 13h30-14h30)'},
+  {zone:'ZONE3', name:'DAMI OUMAIMA', days:[w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 12h-13h)'},
+  {zone:'ZONE5', name:'INTAJ IMANE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 13h-14h)'},
+  {zone:'ZONE6', name:'SYLLA SOKHNA SAFIETOU', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'ABDELAOUI KHADIJA', days:[OFF,w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','14:00'),OFF], heures:'40:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'DIOP MAMADOU MOUSTAPHA DOKY', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'AZIANE YASSINE', days:[w('8:00','18:00'),w('9:00','18:00'),w('9:00','18:00'),w('9:00','18:00'),w('10:00','18:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'}
+];
+const gf_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
+/* ---------------- ASSEMBLE ---------------- */
+const data = {
+  googleleads:{ managers:gl_managers, pause:gl_pause, zones:gl_zones, stats:gl_stats },
+  accessibilite:{ managers:ac_managers, pause:ac_pause, zones:ac_zones, stats:ac_stats },
+  afedim:{ managers:af_managers, pause:af_pause, zones:af_zones, stats:af_stats },
+  cmleasing:{ managers:cm_managers, pause:cm_pause, zones:cm_zones, stats:cm_stats },
+  glf:{ managers:gf_managers, pause:gf_pause, zones:gf_zones, stats:gf_stats }
+};
+
+let currentProject = 'googleleads';
+let currentSubtab = 'managers';
 
 /* IMPORTANT: OFF / CONGE / MISSION / PRESSE / and every w(...) call used above
    were built once and reused as the SAME object across many cells. Without
@@ -586,9 +712,11 @@ let stats = {
 function cloneCells(arr){
   arr.forEach(row=>{ row.days = JSON.parse(JSON.stringify(row.days)); });
 }
-cloneCells(managers);
-cloneCells(pause);
-cloneCells(zones);
+PROJECTS.forEach(pk=>{
+  cloneCells(data[pk].managers);
+  cloneCells(data[pk].pause);
+  cloneCells(data[pk].zones);
+});
 
 /* ---------------- RENDER HELPERS ---------------- */
 function barFillStyle(cellData, colorHex){
@@ -619,12 +747,12 @@ function headerRowHTML(extraCols){
 
 function renderManagers(){
   const el = document.getElementById('table-managers');
-  let rows = managers.map((r,ri)=>{
+  let rows = data[currentProject].managers.map((r,ri)=>{
     const color = zoneColor(r.zone);
     let cells = r.days.map((c,di)=>shiftCellHTML(c,ri,di,'managers',color)).join('');
     return `<tr>
       <td><span class="zone-chip" contenteditable="true" data-table="managers" data-row="${ri}" data-field="zone"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
-      <td><div class="name-cell" contenteditable="true" data-table="managers" data-row="${ri}" data-field="name">${r.name}</div><span class="role-tag" contenteditable="true" data-table="managers" data-row="${ri}" data-field="role">${r.role}</span></td>
+      <td><div class="name-cell" contenteditable="true" data-table="managers" data-row="${ri}" data-field="name">${r.name}</div><span class="role-tag" contenteditable="true" data-table="managers" data-row="${ri}" data-field="role">${r.role||''}</span></td>
       ${cells}
       <td class="small-col editable-txt" contenteditable="true" data-table="managers" data-row="${ri}" data-field="off">${countOff(r.days)}</td>
       <td class="small-col editable-txt" contenteditable="true" data-table="managers" data-row="${ri}" data-field="heures">${r.heures||autoHeures(r.days)}</td>
@@ -637,7 +765,7 @@ function renderManagers(){
 
 function renderPause(){
   const el = document.getElementById('table-pause');
-  let rows = pause.map((r,ri)=>{
+  let rows = data[currentProject].pause.map((r,ri)=>{
     const color = zoneColor(r.zone);
     let cells = r.days.map((c,di)=>shiftCellHTML(c,ri,di,'pause',color)).join('');
     return `<tr>
@@ -652,7 +780,7 @@ function renderPause(){
 
 function renderZones(){
   const el = document.getElementById('table-zones');
-  let rows = zones.map((r,ri)=>{
+  let rows = data[currentProject].zones.map((r,ri)=>{
     const color = zoneColor(r.zone);
     let cells = r.days.map((c,di)=>shiftCellHTML(c,ri,di,'zones',color)).join('');
     return `<tr>
@@ -670,18 +798,58 @@ function renderZones(){
 
 function renderStats(){
   const el = document.getElementById('table-stats');
+  const statsObj = data[currentProject].stats;
   const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
   let head = `<tr><th>Indicateur</th>${DAYS.map(dn=>`<th>${dn}</th>`).join('')}</tr>`;
   let body = labels.map(([key,label])=>{
-    let cells = stats[key].map((v,di)=>`<td class="editable-txt" contenteditable="true" data-stat="${key}" data-day="${di}">${v}</td>`).join('');
+    let cells = statsObj[key].map((v,di)=>`<td class="editable-txt" contenteditable="true" data-stat="${key}" data-day="${di}">${v}</td>`).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   let offRow = `<tr><td>NB OFF (auto)</td>${DAYS.map((dn,di)=>`<td class="editable-txt">${countOffDay(di)}</td>`).join('')}</tr>`;
   el.innerHTML = `<thead>${head}</thead><tbody>${body}${offRow}</tbody>`;
 }
 
+function completHeaderHTML(){
+  let ths = DAYS.map((dn,i)=>{
+    const short = dn.charAt(0).toUpperCase()+dn.slice(1);
+    return `<th>${short} — Entrée<div style="font-weight:400;font-size:9px;text-transform:none;color:var(--sub);margin-top:2px">${DATES[i]}</div></th><th>${short} — Sortie</th>`;
+  }).join('');
+  return `<thead><tr><th>Activité</th><th>Zone</th><th>Collaborateur</th>${ths}<th>OFF</th><th>Heures</th><th>Commentaires</th></tr></thead>`;
+}
+
+function completCellHTML(c){
+  if(c.status==='work') return `<td class="small-col">${c.start}</td><td class="small-col">${c.end}</td>`;
+  const label = STATUS[c.status].label.toUpperCase();
+  return `<td class="small-col" style="color:var(--rose);font-weight:700">${label}</td><td class="small-col" style="color:var(--rose);font-weight:700">${label}</td>`;
+}
+
+function renderComplet(){
+  const el = document.getElementById('table-complet');
+  let rows = '';
+  PROJECTS.forEach(pk=>{
+    const label = PROJECT_LABELS[pk];
+    const proj = data[pk];
+    ['managers','zones'].forEach(section=>{
+      proj[section].forEach(r=>{
+        const color = zoneColor(r.zone);
+        let cells = r.days.map(c=>completCellHTML(c)).join('');
+        rows += `<tr>
+          <td><span class="activite-chip">${label}</span></td>
+          <td><span class="zone-chip"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
+          <td class="name-cell" style="cursor:default">${r.role?r.role+' ':''}${r.name}</td>
+          ${cells}
+          <td class="small-col">${countOff(r.days)}</td>
+          <td class="small-col">${r.heures||autoHeures(r.days)}</td>
+          <td class="comment-col">${r.comment||''}</td>
+        </tr>`;
+      });
+    });
+  });
+  el.innerHTML = completHeaderHTML() + `<tbody>${rows}</tbody>`;
+}
+
 function countOff(days){ return days.filter(c=>c.status==='off').length; }
-function countOffDay(di){ return zones.filter(r=>r.days[di].status==='off').length; }
+function countOffDay(di){ return data[currentProject].zones.filter(r=>r.days[di].status==='off').length; }
 function autoHeures(days){
   let total=0;
   days.forEach(c=>{ if(c.status==='work' && c.start && c.end){ total += timeToMin(c.end)-timeToMin(c.start); } });
@@ -689,10 +857,10 @@ function autoHeures(days){
   return `${h}:${m.toString().padStart(2,'0')}:00`;
 }
 
-function renderAll(){ renderManagers(); renderPause(); renderZones(); renderStats(); attachEvents(); }
+function renderAll(){ renderManagers(); renderPause(); renderZones(); renderStats(); renderComplet(); attachEvents(); }
 
 /* ---------------- EVENTS ---------------- */
-function getTable(name){ return name==='managers'?managers:name==='pause'?pause:zones; }
+function getTable(name){ return data[currentProject][name]; }
 
 function attachEvents(){
   document.querySelectorAll('.shift-cell').forEach(td=>{
@@ -718,11 +886,11 @@ function attachEvents(){
   document.querySelectorAll('[data-stat]').forEach(elm=>{
     elm.addEventListener('blur', ()=>{
       const key=elm.dataset.stat, di=+elm.dataset.day;
-      stats[key][di] = parseInt(elm.innerText.trim())||0;
+      data[currentProject].stats[key][di] = parseInt(elm.innerText.trim())||0;
     });
   });
   document.querySelectorAll('.dateedit').forEach(elm=>{
-    elm.addEventListener('blur', ()=>{ DATES[+elm.dataset.day] = elm.innerText.trim(); });
+    elm.addEventListener('blur', ()=>{ DATES[+elm.dataset.day] = elm.innerText.trim(); renderComplet(); });
   });
 }
 
@@ -812,7 +980,6 @@ endSlider.addEventListener('input', ()=>{ updateSliderLabels(); refreshCellDispl
 function refreshCellDisplay(){
   if(!current) return;
   renderAll();
-  // reopen same cell reference visually (renderAll rebuilds DOM, popover stays as-is)
 }
 
 function closePopover(){
@@ -827,9 +994,8 @@ backdrop.addEventListener('click', closePopover);
 const MONTHS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
 function mondayOfISOWeek(week, year){
-  // date of the Monday of the given ISO week number for the given year
   const simple = new Date(year, 0, 1 + (week-1)*7);
-  const dow = simple.getDay() || 7; // Sunday=0 -> 7
+  const dow = simple.getDay() || 7;
   const monday = new Date(simple);
   monday.setDate(simple.getDate() - dow + 1);
   return monday;
@@ -857,48 +1023,73 @@ function updateDatesFromWeek(){
 document.getElementById('weekBadge').addEventListener('blur', updateDatesFromWeek);
 document.getElementById('yearBadge').addEventListener('blur', updateDatesFromWeek);
 
-/* ---------------- TABS ---------------- */
-document.querySelectorAll('.tab').forEach(tab=>{
+/* ---------------- TABS : projects ---------------- */
+function showView(viewKey){
+  document.querySelectorAll('.tabview').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+viewKey).classList.add('active');
+}
+
+document.querySelectorAll('#projTabs .tab').forEach(tab=>{
   tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tabview').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('#projTabs .tab').forEach(t=>t.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById('view-'+tab.dataset.tab).classList.add('active');
+    currentProject = tab.dataset.project;
+    const subtabsBar = document.getElementById('subtabsBar');
+    const addBtn = document.getElementById('addRowBtn');
+    if(currentProject==='complet'){
+      subtabsBar.style.display='none';
+      addBtn.disabled = true;
+      showView('complet');
+    } else {
+      subtabsBar.style.display='flex';
+      addBtn.disabled = false;
+      showView(currentSubtab);
+    }
+    renderAll();
+  });
+});
+
+/* ---------------- TABS : sections ---------------- */
+document.querySelectorAll('#subtabsBar .tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('#subtabsBar .tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentSubtab = tab.dataset.tab;
+    showView(currentSubtab);
   });
 });
 
 /* ---------------- ADD ROW ---------------- */
 document.getElementById('addRowBtn').addEventListener('click', ()=>{
-  const activeTab = document.querySelector('.tab.active').dataset.tab;
+  if(currentProject==='complet') return;
   const blankDays = () => Array.from({length:7},()=>({status:'off',start:null,end:null}));
-  if(activeTab==='managers') managers.push({zone:'ZONE1', role:'Manager', name:'Nouveau manager', days:blankDays(), comment:''});
-  else if(activeTab==='pause') pause.push({zone:'ZONE1', name:'Nouveau collaborateur', days:blankDays()});
-  else zones.push({zone:'ZONE1', name:'Nouveau collaborateur', days:blankDays(), heures:'0:00:00', comment:''});
+  const proj = data[currentProject];
+  if(currentSubtab==='managers') proj.managers.push({zone:'ZONE1', role:'Manager', name:'Nouveau manager', days:blankDays(), comment:''});
+  else if(currentSubtab==='pause') proj.pause.push({zone:'ZONE1', name:'Nouveau collaborateur', days:blankDays()});
+  else proj.zones.push({zone:'ZONE1', name:'Nouveau collaborateur', days:blankDays(), heures:'0:00:00', comment:''});
   renderAll();
 });
 
 /* ---------------- EXPORT EXCEL ---------------- */
 async function exportExcel(){
   const wb = new ExcelJS.Workbook();
-  const weekLabel = document.getElementById('weekBadge').innerText.trim();
+  const weekLabel = document.getElementById('weekBadge').innerText.trim() + ' ' + document.getElementById('yearBadge').innerText.trim();
 
   function buildSheet(name, rows, opts){
-    const ws = wb.addWorksheet(name);
+    const ws = wb.addWorksheet(name.substring(0,31));
     const hasExtra = !!opts.extra;
-    const dayColsStart = 3;          // col 3 = first "Debut de shift"
-    const dayColsEnd = 2 + 7*2;      // 2 cols per day, 7 days
+    const dayColsStart = 3;
+    const dayColsEnd = 2 + 7*2;
     const extraStart = dayColsEnd+1;
     const totalCols = hasExtra ? extraStart+2 : dayColsEnd;
 
-    // Row 1: week banner
     ws.mergeCells(1,1,1,totalCols);
     const titleCell = ws.getCell(1,1);
-    titleCell.value = weekLabel;
+    titleCell.value = weekLabel + ' — ' + name;
     titleCell.font = {bold:true, color:{argb:'FFFFFFFF'}, size:13};
     titleCell.alignment = {horizontal:'center'};
     titleCell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF152447'}};
 
-    // Row 2/3: Zone / Collaborateur (merged vertically) + one merged header per day (spans 2 cols) with Début/Fin sub-row
     ws.mergeCells(2,1,3,1);
     ws.mergeCells(2,2,3,2);
     ws.getCell(2,1).value = 'Zones';
@@ -930,7 +1121,7 @@ async function exportExcel(){
     rows.forEach((r,ri)=>{
       const row = ws.getRow(4+ri);
       row.getCell(1).value = r.zone;
-      row.getCell(2).value = opts.nameLabel==='Managers et GF' ? `${r.role||''} ${r.name}`.trim() : r.name;
+      row.getCell(2).value = r.role ? `${r.role} ${r.name}`.trim() : r.name;
       r.days.forEach((c,di)=>{
         const startCell = row.getCell(dayColsStart + di*2);
         const endCell = row.getCell(dayColsStart + di*2 + 1);
@@ -955,24 +1146,60 @@ async function exportExcel(){
     if(hasExtra){ ws.getColumn(extraStart).width=8; ws.getColumn(extraStart+1).width=12; ws.getColumn(extraStart+2).width=22; }
   }
 
-  buildSheet('Managers et GF', managers, {nameLabel:'Managers et GF', extra:true});
-  buildSheet('Pause dejeuner', pause, {nameLabel:'Collaborateur', extra:false});
-  buildSheet('Planning zones', zones, {nameLabel:'Collaborateur', extra:true});
+  function buildStatsSheet(name, statsObj){
+    const ws = wb.addWorksheet(name.substring(0,31));
+    const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
+    ws.getRow(1).values = ['Indicateur', ...DAYS];
+    ws.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}}; });
+    labels.forEach(([key,label],i)=>{ ws.getRow(2+i).values = [label, ...statsObj[key]]; });
+    ws.getColumn(1).width=18;
+  }
 
-  // stats sheet
-  const wsStats = wb.addWorksheet('Synthese');
-  const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
-  wsStats.getRow(1).values = ['Indicateur', ...DAYS];
-  wsStats.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}}; });
-  labels.forEach(([key,label],i)=>{ wsStats.getRow(2+i).values = [label, ...stats[key]]; });
-  wsStats.getRow(2+labels.length).values = ['NB OFF (auto)', ...DAYS.map((d,di)=>countOffDay(di))];
-  wsStats.getColumn(1).width=18;
+  PROJECTS.forEach(pk=>{
+    const proj = data[pk];
+    const lbl = PROJECT_LABELS[pk];
+    buildSheet(`${lbl} - Managers`, proj.managers, {nameLabel:'Managers et GF', extra:true});
+    buildSheet(`${lbl} - Pause`, proj.pause, {nameLabel:'Collaborateur', extra:false});
+    buildSheet(`${lbl} - Zones`, proj.zones, {nameLabel:'Collaborateur', extra:true});
+    buildStatsSheet(`${lbl} - Synthese`, proj.stats);
+  });
+
+  // Planning complet — toutes activités
+  const wsC = wb.addWorksheet('Planning complet');
+  wsC.getRow(1).values = ['Activité','Zone','Collaborateur', ...DAYS.flatMap(dn=>[dn.charAt(0).toUpperCase()+dn.slice(1)+' - Entrée', dn.charAt(0).toUpperCase()+dn.slice(1)+' - Sortie']), 'OFF','Heures','Commentaires'];
+  wsC.getRow(1).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152447'}}; c.alignment={horizontal:'center'}; });
+  let rIdx=2;
+  PROJECTS.forEach(pk=>{
+    const proj = data[pk];
+    const lbl = PROJECT_LABELS[pk];
+    ['managers','zones'].forEach(sec=>{
+      proj[sec].forEach(r=>{
+        const row = wsC.getRow(rIdx++);
+        row.getCell(1).value = lbl;
+        row.getCell(2).value = r.zone;
+        row.getCell(3).value = (r.role?r.role+' ':'')+r.name;
+        r.days.forEach((c,di)=>{
+          const sCell = row.getCell(4+di*2), eCell = row.getCell(5+di*2);
+          if(c.status==='work'){ sCell.value=c.start; eCell.value=c.end; }
+          else { sCell.value=STATUS[c.status].label.toUpperCase(); eCell.value=STATUS[c.status].label.toUpperCase(); }
+          [sCell,eCell].forEach(cell=>{ cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:STATUS_FILL_HEX[c.status]}}; cell.alignment={horizontal:'center'}; });
+        });
+        row.getCell(18).value = countOff(r.days);
+        row.getCell(19).value = r.heures || autoHeures(r.days);
+        row.getCell(20).value = r.comment || '';
+        row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
+      });
+    });
+  });
+  wsC.getColumn(1).width=16; wsC.getColumn(2).width=11; wsC.getColumn(3).width=26;
+  for(let i=4;i<=17;i++) wsC.getColumn(i).width=10;
+  wsC.getColumn(18).width=7; wsC.getColumn(19).width=11; wsC.getColumn(20).width=22;
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `Planning_${weekLabel}.xlsx`;
+  a.href = url; a.download = `Planning_${weekLabel.replace(/\s+/g,'_')}.xlsx`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
