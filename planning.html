@@ -437,6 +437,7 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
   <div class="tab" data-project="dac">DAC</div>
   <div class="tab" data-project="facto">Facto</div>
   <div class="tab" data-project="tlv">TLV</div>
+  <div class="tab" data-project="glf">GLF</div>
   <div class="tab tab-complet" data-project="complet">📊 Planning complet</div>
 </div>
 
@@ -549,7 +550,7 @@ function zoneColor(zone){
 }
 
 /* ---------------- PROJECTS ---------------- */
-const PROJECTS = ['googleleads','accessibilite','afedim','cmleasing','dac','facto','tlv'];
+const PROJECTS = ['googleleads','accessibilite','afedim','cmleasing','dac','facto','tlv','glf'];
 const PROJECT_LABELS = {
   googleleads:'Google Leads',
   accessibilite:'Accessibilité',
@@ -557,7 +558,8 @@ const PROJECT_LABELS = {
   cmleasing:'CM Leasing',
   dac:'DAC',
   facto:'Facto',
-  tlv:'TLV'
+  tlv:'TLV',
+  glf:'GLF'
 };
 
 /* ---------------- DATA : Google Leads (activité déjà construite) ---------------- */
@@ -731,6 +733,12 @@ const tlv_zones = [
 ];
 const tlv_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
 
+/* ---------------- DATA : GLF (vide) ---------------- */
+const glf_managers = [];
+const glf_pause = [];
+const glf_zones = [];
+const glf_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
+
 /* ---------------- ASSEMBLE ---------------- */
 const data = {
   googleleads:{ managers:gl_managers, pause:gl_pause, zones:gl_zones, stats:gl_stats },
@@ -739,7 +747,8 @@ const data = {
   cmleasing:{ managers:cm_managers, pause:cm_pause, zones:cm_zones, stats:cm_stats },
   dac:{ managers:dac_managers, pause:dac_pause, zones:dac_zones, stats:dac_stats },
   facto:{ managers:facto_managers, pause:facto_pause, zones:facto_zones, stats:facto_stats },
-  tlv:{ managers:tlv_managers, pause:tlv_pause, zones:tlv_zones, stats:tlv_stats }
+  tlv:{ managers:tlv_managers, pause:tlv_pause, zones:tlv_zones, stats:tlv_stats },
+  glf:{ managers:glf_managers, pause:glf_pause, zones:glf_zones, stats:glf_stats }
 };
 
 let currentProject = 'googleleads';
@@ -1138,10 +1147,9 @@ document.getElementById('addRowBtn').addEventListener('click', ()=>{
 /* ---------------- EXPORT EXCEL ---------------- */
 function fmtHeureExcel(t){
   if(!t) return '';
-  const [h,m] = t.split(':').map(Number);
-  const hh = h.toString().padStart(2,'0');
-  const mm = (m||0).toString().padStart(2,'0');
-  return `${hh}:${mm}`;
+  const [h, m] = t.split(':').map(Number);
+  if (m === 0) return `${h}H`;
+  return `${h}H${m.toString().padStart(2, '0')}`;
 }
 
 async function exportExcel(){
