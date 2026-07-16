@@ -733,20 +733,43 @@ const tlv_zones = [
 ];
 const tlv_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
 
-/* ---------------- DATA : GLF (avec contenu) ---------------- */
+/* ---------------- DATA : GLF (collaborateurs réels) ---------------- */
 const glf_managers = [
-  {zone:'ZONE1', role:'Manager', name:'MANAGER GLF 1', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], comment:'RAS'},
-  {zone:'ZONE2', role:'GF', name:'GF GLF 1', days:[w('8:00','16:00'),w('8:00','16:00'),w('8:00','16:00'),w('8:00','16:00'),w('8:00','16:00'),OFF,OFF], comment:'RAS'}
+  {zone:'TRSPT KO', role:'Manager', name:'EL KAOUTAR Fatima Zahra', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], comment:'RAS'}
 ];
 const glf_pause = [
-  {zone:'ZONE1', name:'COLLAB GLF A', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE2', name:'COLLAB GLF B', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]}
+  {zone:'ZONE4', name:'NDIAYE SEYNABOU', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
+  {zone:'ZONE1', name:'KANDI FATIMA ZAHRA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE6', name:'SANE MOHAMMED LAMINE', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
+  {zone:'ZONE3', name:'HABBOUB KARIM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE1', name:"M'BARKI IMANE", days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
+  {zone:'ZONE4', name:'MBOUP EL HADJI CHEIKH', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE6', name:'NGOM SALIOU', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
+  {zone:'ZONE5', name:'EL AMRANI ABDELMOUGHIT', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE3', name:'OUCHENE ZAKARIA', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
+  {zone:'ZONE8', name:'GUESSAR ZAHRA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
+  {zone:'ZONE5', name:'HAMMADI AYA', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
+  {zone:'ZONE5', name:'EL HASROUF YOUSSEF', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
+  {zone:'ZONE1', name:'ZIRARI CHAIMAA', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
+  {zone:'TRSPT KO', name:'SEMBENE PAPALATY', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]}
 ];
 const glf_zones = [
-  {zone:'ZONE1', name:'COLLAB GLF 1', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'COLLAB GLF 2', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
+  {zone:'ZONE4', name:'NDIAYE SEYNABOU', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE1', name:'KANDI FATIMA ZAHRA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'SANE MOHAMMED LAMINE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'HABBOUB KARIM', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE1', name:"M'BARKI IMANE", days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE4', name:'MBOUP EL HADJI CHEIKH', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE6', name:'NGOM SALIOU', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'EL AMRANI ABDELMOUGHIT', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE3', name:'OUCHENE ZAKARIA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE8', name:'GUESSAR ZAHRA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'HAMMADI AYA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE5', name:'EL HASROUF YOUSSEF', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'ZONE1', name:'ZIRARI CHAIMAA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
+  {zone:'TRSPT KO', name:'SEMBENE PAPALATY', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
 ];
-const glf_stats = { ouverture:[2,2,2,2,2,0,0], renfort:[0,0,0,0,0,0,0], middle:[1,1,1,1,1,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[1,1,1,1,1,0,0] };
+const glf_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
 
 /* ---------------- ASSEMBLE ---------------- */
 const data = {
