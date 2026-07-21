@@ -122,6 +122,8 @@
   .tag-off{color:var(--muted); font-style:italic;}
   .tag-conge{color:var(--ok); font-weight:600;}
   .tag-ferie{color:var(--warn); font-weight:600;}
+  .tag-mission{color:#8A7000; font-weight:600;}
+  .tag-presse{color:#8A7000; font-weight:600;}
   .role-manager{background:#DCEFD9 !important;}
   .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px;}
 
@@ -187,13 +189,14 @@
       <span><span class="dot" style="background:#F2DCA6"></span>OFF / Repos</span>
       <span><span class="dot" style="background:#D9EAD3"></span>Congé</span>
       <span><span class="dot" style="background:#D9D9D9"></span>Férié</span>
+      <span><span class="dot" style="background:#FFF200"></span>Missionnée / Presse</span>
       <span style="color:var(--muted)">gris = heure France · <span style="color:var(--ma);font-weight:600">rouge = heure Maroc (−1h)</span></span>
     </div>
   </div>
 
   <div class="card" id="exportCard" style="display:none;">
     <h2><span class="num">3</span>Générer le fichier Excel</h2>
-    <p class="sub">Une feuille est créée avec, pour chaque semaine détectée : un tableau Collaborateurs, un encart Shift / Pause déjeuner, puis un tableau Manager — dans le même esprit que ton fichier de suivi actuel.</p>
+    <p class="sub">Le fichier généré contient deux feuilles : « Plannings (heure Maroc) » (shifts complets) et « Planning pause déjeuner » — dans la mise en page Zones / Collaborateur / D P / FP par jour, comme ton fichier de suivi actuel.</p>
     <div class="actions-row">
       <button class="btn export" id="exportBtn">⭳ Télécharger le fichier Excel (heure Maroc)</button>
     </div>
@@ -302,6 +305,8 @@ function parsePersonBlocksFromPage(rawText){
       } else if(/repos/i.test(content)){ status='repos'; }
         else if(/cong[ée]/i.test(content) || /\bCP\b/.test(content)){ status='conge'; }
         else if(/f[ée]ri[ée]/i.test(content)){ status='ferie'; }
+        else if(/mission/i.test(content)){ status='mission'; }
+        else if(/presse/i.test(content)){ status='presse'; }
         else if(/off/i.test(content)){ status='repos'; }
 
       days.push({
@@ -433,6 +438,8 @@ function dayCellHTML(day){
   if(day.status==='repos') return '<span class="tag-off">OFF</span>';
   if(day.status==='conge') return '<span class="tag-conge">Congé</span>';
   if(day.status==='ferie') return '<span class="tag-ferie">Férié</span>';
+  if(day.status==='mission') return '<span class="tag-mission">Missionnée</span>';
+  if(day.status==='presse') return '<span class="tag-presse">Presse</span>';
   return '<span class="empty-hint">?</span>';
 }
 
@@ -504,7 +511,10 @@ const COLORS = {
   ferie: 'FFD9D9D9',
   managerTag: 'FFA9D18E',
   zebra: 'FFF7F8FA',
-  border: 'FFB9C1CE'
+  border: 'FFB9C1CE',
+  pauseTime: 'FFDCE6F5',
+  missionPresse: 'FFFFF200',
+  trsptKo: 'FFED9B33'
 };
 function thinBorder(){
   return { top:{style:'thin',color:{argb:COLORS.border}}, left:{style:'thin',color:{argb:COLORS.border}},
@@ -711,7 +721,154 @@ async function buildWorkbook(){
   });
 
   ws.views = [{state:'frozen', ySplit:0}];
+
+  buildPauseSheet(wb, weeks, weekKeys);
+
   return wb;
+}
+
+// ---------- Feuille "Planning pause déjeuner" ----------
+function pauseStatusForDay(day){
+  if(!day) return {type:'none'};
+  if(day.status==='travail'){
+    if(day.pauseMA) return {type:'time', start:day.pauseMA[0], end:day.pauseMA[1]};
+    return {type:'none'};
+  }
+  if(day.status==='repos') return {type:'off'};
+  if(day.status==='conge') return {type:'conge'};
+  if(day.status==='ferie') return {type:'ferie'};
+  if(day.status==='mission') return {type:'mission'};
+  if(day.status==='presse') return {type:'presse'};
+  return {type:'none'};
+}
+
+function buildPauseSheet(wb, weeks, weekKeys){
+  const ws = wb.addWorksheet('Planning pause déjeuner');
+
+  ws.getColumn(1).width = 11;  // Zones
+  ws.getColumn(2).width = 24;  // Collaborateur
+  for(let c=3;c<=16;c++) ws.getColumn(c).width = 8.5; // 7 jours x 2 (D P / FP)
+
+  let row = 1;
+
+  weekKeys.forEach(wk=>{
+    const members = weeks[wk];
+    const refPerson = members.slice().sort((a,b)=>b.days.length-a.days.length)[0];
+    const refDays = refPerson.days;
+
+    // Bandeau titre
+    const titleRow = row;
+    ws.mergeCells(titleRow,1,titleRow,16);
+    const titleCell = ws.getCell(titleRow,1);
+    titleCell.value = 'Planning pause déjeuner';
+    titleCell.font = {bold:true, color:{argb:COLORS.bandText}, size:12};
+    titleCell.fill = fill(COLORS.band);
+    titleCell.alignment = {vertical:'middle', horizontal:'left', indent:1};
+
+    // Ligne "Zones" / "Collaborateur" + jours (fusion verticale sur 2 lignes pour les 2 premières colonnes)
+    const headRow = titleRow+1, subRow = titleRow+2;
+    ws.mergeCells(headRow,1,subRow,1);
+    ws.mergeCells(headRow,2,subRow,2);
+    ws.getCell(headRow,1).value = 'Zones';
+    ws.getCell(headRow,2).value = 'Collaborateur';
+    [1,2].forEach(c=>{
+      const cell = ws.getCell(headRow,c);
+      cell.font = {bold:true, color:{argb:COLORS.bandText}, size:10.5};
+      cell.fill = fill(COLORS.subHeader);
+      cell.alignment = {vertical:'middle', horizontal:'center'};
+    });
+
+    for(let d=0; d<7; d++){
+      const col = 3 + d*2;
+      ws.mergeCells(headRow, col, headRow, col+1);
+      const info = refDays[d];
+      const headCell = ws.getCell(headRow, col);
+      headCell.value = info ? (DAY_FULL[info.dayAbbr]+' '+info.date) : DAY_FULL[DAY_ABBR[d]];
+      headCell.font = {bold:true, color:{argb:COLORS.bandText}, size:10};
+      headCell.fill = fill(COLORS.band);
+      headCell.alignment = {vertical:'middle', horizontal:'center'};
+
+      ws.getCell(subRow,col).value = 'D P';
+      ws.getCell(subRow,col+1).value = 'FP';
+      [col,col+1].forEach(c=>{
+        const cell = ws.getCell(subRow,c);
+        cell.font = {bold:true, color:{argb:COLORS.bandText}, size:9.5};
+        cell.fill = fill(COLORS.subHeader);
+        cell.alignment = {vertical:'middle', horizontal:'center'};
+      });
+    }
+    for(let c=1;c<=16;c++){
+      ws.getCell(headRow,c).border = thinBorder();
+      ws.getCell(subRow,c).border = thinBorder();
+    }
+    ws.autoFilter = { from:{row:headRow, column:1}, to:{row:headRow, column:16} };
+
+    row = subRow+1;
+
+    members.forEach(person=>{
+      const r = row;
+      const byAbbr = {};
+      person.days.forEach(d=>byAbbr[d.dayAbbr]=d);
+
+      const zoneCell = ws.getCell(r,1);
+      zoneCell.value = person.zone || '';
+      zoneCell.alignment = {vertical:'middle', horizontal:'center'};
+      zoneCell.font = {bold:true, size:9.5, color:{argb: (person.zone||'').toUpperCase()==='TRSPT KO' ? 'FFFFFFFF' : 'FFFFFFFF'}};
+      zoneCell.fill = fill((person.zone||'').toUpperCase()==='TRSPT KO' ? COLORS.trsptKo : COLORS.subHeader);
+
+      const nameCell = ws.getCell(r,2);
+      nameCell.value = person.name;
+      nameCell.font = {bold:true, size:10, color:{argb:'FFFFFFFF'}};
+      nameCell.fill = fill(COLORS.subHeader);
+      nameCell.alignment = {vertical:'middle', horizontal:'left', indent:1};
+
+      for(let d=0; d<7; d++){
+        const col = 3 + d*2;
+        const day = byAbbr[DAY_ABBR[d]];
+        const info = pauseStatusForDay(day);
+        const c1 = ws.getCell(r,col), c2 = ws.getCell(r,col+1);
+
+        if(info.type==='time'){
+          c1.value = info.start; c2.value = info.end;
+          c1.fill = fill(COLORS.pauseTime); c2.fill = fill(COLORS.pauseTime);
+          c1.font = {size:10}; c2.font = {size:10};
+        } else if(info.type==='off'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'OFF'; c1.fill = fill(COLORS.off);
+          c1.font = {size:10, color:{argb:'FF8A5A00'}};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='conge'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Congé'; c1.fill = fill(COLORS.conge);
+          c1.font = {size:10, bold:true, color:{argb:'FF2F6E44'}};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='ferie'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Férié'; c1.fill = fill(COLORS.ferie);
+          c1.font = {size:10};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='mission'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Missionnée'; c1.fill = fill(COLORS.missionPresse);
+          c1.font = {size:10, bold:true};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='presse'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Presse'; c1.fill = fill(COLORS.missionPresse);
+          c1.font = {size:10, bold:true};
+          c1.alignment = {horizontal:'center'};
+        } else {
+          c1.value=''; c2.value='';
+        }
+      }
+      for(let c=1;c<=16;c++){ ws.getCell(r,c).border = thinBorder(); }
+      row++;
+    });
+
+    row += 2; // espace avant la semaine suivante
+  });
+
+  ws.views = [{state:'frozen', xSplit:2, ySplit:3}];
 }
 
 document.getElementById('exportBtn').addEventListener('click', async ()=>{
