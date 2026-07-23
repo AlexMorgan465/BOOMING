@@ -440,6 +440,31 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 }
 .time-btn:hover{background:#F0F3FB;}
 .time-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.time-custom-row{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:6px;
+}
+.time-custom-row label{
+  font-size:10.5px;
+  color:var(--sub);
+  white-space:nowrap;
+}
+.time-custom-input{
+  border:1.5px solid var(--line);
+  border-radius:7px;
+  padding:5px 8px;
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:600;
+  font-size:12px;
+  color:var(--navy);
+  width:88px;
+  text-align:center;
+}
+.time-custom-input:focus{outline:none;border-color:var(--navy);}
+.time-custom-input.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+.time-custom-input.invalid{border-color:var(--rose);color:var(--rose);}
 .preview-track{
   height:8px;background:#E7E9F1;border-radius:5px;position:relative;margin:10px 0 6px 0;overflow:hidden;
 }
@@ -545,9 +570,17 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
       <label>Début</label>
       <div class="time-btn-grid" id="startBtnGrid"></div>
     </div>
+    <div class="time-custom-row" id="startCustomRow">
+      <label>Spécial</label>
+      <input type="text" class="time-custom-input" id="startCustomInput" placeholder="ex: 6:45" inputmode="numeric">
+    </div>
     <div class="time-row">
       <label>Fin</label>
       <div class="time-btn-grid" id="endBtnGrid"></div>
+    </div>
+    <div class="time-custom-row" id="endCustomRow">
+      <label>Spécial</label>
+      <input type="text" class="time-custom-input" id="endCustomInput" placeholder="ex: 19:45" inputmode="numeric">
     </div>
   </div>
   <div class="pop-actions" style="flex-wrap:wrap;gap:8px">
@@ -1220,6 +1253,10 @@ renfortInput.addEventListener('input', ()=>{
 });
 const startBtnGrid = document.getElementById('startBtnGrid');
 const endBtnGrid = document.getElementById('endBtnGrid');
+const startCustomInput = document.getElementById('startCustomInput');
+const endCustomInput = document.getElementById('endCustomInput');
+const startCustomRow = document.getElementById('startCustomRow');
+const endCustomRow = document.getElementById('endCustomRow');
 const previewFill = document.getElementById('previewFill');
 let current = null; // {table, row, day}
 let weekClipboard = null; // {table, days:[...]}
@@ -1231,6 +1268,18 @@ const PAUSE_START_OPTIONS = ['11:00','11:30','12:00','12:30','13:00','13:30','14
 function addOneHour(t){
   const [h,m] = t.split(':').map(Number);
   return (h+1) + ':' + m.toString().padStart(2,'0');
+}
+
+/* Accepte "6:45", "06:45", "6h45", "645" etc. et renvoie "H:MM" ou null si invalide */
+function parseCustomTime(raw){
+  if(!raw) return null;
+  const s = raw.trim().toLowerCase().replace('h',':');
+  let m = s.match(/^(\d{1,2}):(\d{1,2})$/);
+  if(!m) m = s.match(/^(\d{1,2})$/) ? [s, s, '0'] : null;
+  if(!m) return null;
+  const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  if(isNaN(h) || isNaN(mi) || h<0 || h>29 || mi<0 || mi>59) return null;
+  return h + ':' + mi.toString().padStart(2,'0');
 }
 
 function openPopover(td){
@@ -1307,8 +1356,12 @@ function renderTimeButtons(cell){
       if(isPause){ cell.end = addOneHour(cell.start); }
       startBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
+      startCustomInput.value = '';
+      startCustomInput.classList.remove('active','invalid');
       if(isPause){
         endBtnGrid.innerHTML = `<button type="button" class="time-btn active" disabled>${cell.end}</button><div style="font-size:11px;color:var(--sub);margin-left:6px;align-self:center">(début + 1h)</div>`;
+        endCustomInput.value = '';
+        endCustomInput.classList.remove('active','invalid');
       }
       updatePreviewFill(cell);
       refreshCellDisplay();
@@ -1320,14 +1373,67 @@ function renderTimeButtons(cell){
         cell.end = btn.dataset.time;
         endBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
+        endCustomInput.value = '';
+        endCustomInput.classList.remove('active','invalid');
         updatePreviewFill(cell);
         refreshCellDisplay();
       });
     });
   }
 
+  // Champ libre : entrée / sortie spéciale (horaire hors des boutons standards)
+  const startIsCustom = cell.start && !startOpts.includes(cell.start);
+  startCustomInput.value = startIsCustom ? cell.start : '';
+  startCustomInput.classList.toggle('active', !!startIsCustom);
+  startCustomInput.classList.remove('invalid');
+
+  endCustomRow.style.display = isPause ? 'none' : 'flex';
+  if(!isPause){
+    const endIsCustom = cell.end && !END_OPTIONS.includes(cell.end);
+    endCustomInput.value = endIsCustom ? cell.end : '';
+    endCustomInput.classList.toggle('active', !!endIsCustom);
+    endCustomInput.classList.remove('invalid');
+  }
+
   updatePreviewFill(cell);
 }
+
+function bindCustomTimeInput(input, role){
+  input.addEventListener('input', ()=>{
+    if(!current) return;
+    const dataRow = getTable(current.table)[current.row];
+    const cell = dataRow.days[current.day];
+    const isPause = current.table === 'pause';
+    const raw = input.value;
+    if(raw.trim()===''){
+      input.classList.remove('active','invalid');
+      return;
+    }
+    const parsed = parseCustomTime(raw);
+    if(!parsed){
+      input.classList.remove('active');
+      input.classList.add('invalid');
+      return;
+    }
+    input.classList.remove('invalid');
+    input.classList.add('active');
+    if(role==='start'){
+      cell.start = parsed;
+      if(isPause) cell.end = addOneHour(parsed);
+      startBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+      if(isPause){
+        endBtnGrid.innerHTML = `<button type="button" class="time-btn active" disabled>${cell.end}</button><div style="font-size:11px;color:var(--sub);margin-left:6px;align-self:center">(début + 1h)</div>`;
+      }
+    } else {
+      cell.end = parsed;
+      endBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+    }
+    updatePreviewFill(cell);
+    refreshCellDisplay();
+  });
+}
+bindCustomTimeInput(startCustomInput, 'start');
+bindCustomTimeInput(endCustomInput, 'end');
 
 function updatePreviewFill(cell){
   if(!cell.start || !cell.end){ previewFill.style.width='0%'; return; }
