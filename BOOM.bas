@@ -3,1626 +3,1107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Planning multi-activités — Éditeur</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<title>Convertisseur Planning FR → MA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
-:root{
-  --navy:#152447;
-  --navy-2:#1d3363;
-  --paper:#F3F5F9;
-  --card:#ffffff;
-  --ink:#1B2130;
-  --sub:#6b7590;
-  --line:#E1E5EE;
-  --teal:#1F7A6C;
-  --teal-soft:#E4F2EF;
-  --rose:#D9534F;
-  --rose-soft:#FBE7E6;
-  --sage:#3F8F5E;
-  --sage-soft:#E4F3E8;
-  --amber:#DB8A2A;
-  --amber-soft:#FCEBD6;
-  --gold:#C9A227;
-  --gold-soft:#FAF1CE;
-  --sky:#2F7FB5;
-  --sky-soft:#E1EEF7;
-  --violet:#6C4FA8;
-  --violet-soft:#EBE5F7;
-  --radius:10px;
-  --shadow:0 8px 24px rgba(21,36,71,.10);
-}
-*{box-sizing:border-box;}
-html,body{margin:0;padding:0;}
-body{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:'Inter',sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
-.appbar{
-  background:linear-gradient(120deg,var(--navy),var(--navy-2));
-  color:#fff;
-  padding:18px 24px;
-  display:flex;
-  align-items:center;
-  gap:18px;
-  flex-wrap:wrap;
-  position:sticky;
-  top:0;
-  z-index:40;
-  box-shadow:var(--shadow);
-}
-.appbar h1{
-  font-family:'Space Grotesk',sans-serif;
-  font-size:20px;
-  margin:0;
-  letter-spacing:.2px;
-  display:flex;
-  align-items:baseline;
-  gap:10px;
-}
-.appbar h1 .week-badge{
-  font-family:'IBM Plex Mono',monospace;
-  background:rgba(255,255,255,.14);
-  padding:3px 10px;
-  border-radius:20px;
-  font-size:13px;
-  outline:none;
-  border:1px solid transparent;
-  min-width:44px;
-  text-align:center;
-}
-.appbar h1 .week-badge:focus{border-color:rgba(255,255,255,.6);}
-.appbar .sub{
-  font-size:12.5px;
-  color:rgba(255,255,255,.65);
-  margin-left:auto;
-}
-.btn{
-  border:none;
-  border-radius:8px;
-  padding:9px 14px;
-  font-family:'Inter',sans-serif;
-  font-weight:600;
-  font-size:13px;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  gap:7px;
-  transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
-}
-.btn:active{transform:translateY(1px);}
-.btn-primary{background:#fff;color:var(--navy);}
-.btn-primary:hover{box-shadow:0 4px 14px rgba(0,0,0,.18);}
-.btn-ghost{background:rgba(255,255,255,.12);color:#fff;}
-.btn-ghost:hover{background:rgba(255,255,255,.22);}
-.btn-small{padding:6px 10px;font-size:12px;border-radius:7px;}
-.btn[disabled]{opacity:.35;cursor:not-allowed;}
+  :root{
+    --navy:#132A45;
+    --navy-2:#1C3D63;
+    --blue:#2E5395;
+    --blue-light:#DCE6F5;
+    --paper:#F6F5F1;
+    --panel:#FFFFFF;
+    --ink:#1B2430;
+    --muted:#667085;
+    --line:#E1E4EA;
+    --fr:#2255A4;
+    --ma:#C1272D;
+    --ok:#3E8E5A;
+    --warn:#B9862F;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Segoe UI", Inter, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header.app{
+    background:linear-gradient(120deg, var(--navy) 0%, var(--navy-2) 100%);
+    color:#fff; padding:22px 28px 26px;
+  }
+  header.app h1{
+    margin:0; font-size:22px; letter-spacing:.2px; font-weight:700;
+  }
+  header.app p{margin:6px 0 0; color:#C6D3E8; font-size:13.5px; max-width:760px; line-height:1.5;}
+  .tz-badge{
+    display:inline-flex; align-items:center; gap:8px; margin-top:14px;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+    padding:6px 12px; border-radius:999px; font-size:12.5px; font-weight:600;
+  }
+  .tz-badge .fr{color:#9FC1FF;}
+  .tz-badge .ma{color:#FF9E9E;}
+  .tz-badge svg{width:14px;height:14px;}
 
-.tabs{
-  display:flex;
-  gap:4px;
-  padding:14px 24px 0 24px;
-  background:var(--paper);
-  position:sticky;
-  z-index:35;
-  flex-wrap:wrap;
-}
-.proj-tabs{ top:74px; padding-top:16px; }
-.subtabs{ top:126px; padding-top:6px; }
-.tab{
-  padding:10px 18px;
-  border-radius:10px 10px 0 0;
-  background:transparent;
-  color:var(--sub);
-  font-weight:600;
-  font-size:13.5px;
-  cursor:pointer;
-  border:1px solid transparent;
-  border-bottom:none;
-}
-.tab.active{
-  background:var(--card);
-  color:var(--navy);
-  border-color:var(--line);
-}
-.proj-tabs .tab{font-size:14.5px;}
-.proj-tabs .tab.tab-complet{color:var(--gold);}
-.proj-tabs .tab.tab-complet.active{color:var(--navy);border-color:var(--gold);box-shadow:inset 0 2px 0 var(--gold);}
-.subtabs .tab{font-size:12.5px;padding:8px 15px;}
+  main{max-width:1180px; margin:0 auto; padding:26px 20px 80px;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px 22px; margin-bottom:20px; box-shadow:0 1px 2px rgba(20,30,50,.04);
+  }
+  .card h2{
+    margin:0 0 4px; font-size:15px; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--navy-2); display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .num{
+    background:var(--blue); color:#fff; width:22px;height:22px; border-radius:6px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:12px;
+  }
+  .card > .sub{color:var(--muted); font-size:13px; margin:0 0 14px;}
 
-.panel{
-  padding:18px 24px 60px 24px;
-}
-.tabview{display:none;}
-.tabview.active{display:block;}
+  #dropzone{
+    border:2px dashed #B9C6DC; border-radius:var(--radius); padding:26px;
+    text-align:center; cursor:pointer; transition:.15s; background:#FAFBFD;
+  }
+  #dropzone.drag{border-color:var(--blue); background:var(--blue-light);}
+  #dropzone p{margin:4px 0; color:var(--muted); font-size:13.5px;}
+  #dropzone strong{color:var(--navy-2);}
+  #fileInput{display:none;}
 
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  overflow:hidden;
-  margin-bottom:22px;
-}
-.card-head{
-  padding:14px 18px;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  border-bottom:1px solid var(--line);
-  flex-wrap:wrap;
-}
-.card-head h2{
-  font-family:'Space Grotesk',sans-serif;
-  font-size:15px;
-  margin:0;
-  color:var(--navy);
-}
-.card-head .hint{
-  font-size:12px;
-  color:var(--sub);
-}
-.card-head .spacer{flex:1;}
+  #fileList{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .file-chip{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#F1F3F7; border:1px solid var(--line); border-radius:8px;
+    padding:8px 12px; font-size:13px;
+  }
+  .file-chip .name{font-weight:600; color:var(--navy-2);}
+  .file-chip .meta{color:var(--muted); font-size:12px;}
+  .file-chip button{
+    background:none;border:none;color:#B23A48;cursor:pointer;font-size:12px;font-weight:600;
+  }
 
-.table-scroll{overflow-x:auto;}
-table.plan{
-  border-collapse:collapse;
-  width:100%;
-  min-width:1180px;
-  font-size:13px;
-}
-table.plan.complet{min-width:1520px;}
-table.plan thead th{
-  background:#F7F8FC;
-  color:var(--navy);
-  font-weight:700;
-  font-size:11.5px;
-  text-transform:uppercase;
-  letter-spacing:.4px;
-  padding:9px 8px;
-  border-bottom:2px solid var(--line);
-  border-right:1px solid var(--line);
-  position:sticky;
-  top:0;
-  white-space:nowrap;
-}
-table.plan thead tr.daterow th{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:10.5px;
-  text-transform:none;
-  color:var(--sub);
-  font-weight:600;
-  cursor:text;
-  outline:none;
-}
-table.plan tbody td{
-  border-bottom:1px solid var(--line);
-  border-right:1px solid var(--line);
-  padding:6px 7px;
-  vertical-align:middle;
-}
-table.plan tbody tr:hover{background:#FAFBFF;}
-table.plan tbody tr:nth-child(even){background:#FCFDFE;}
-table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; border:none; cursor:pointer;
+    padding:11px 18px; border-radius:8px; font-size:13.5px; font-weight:600;
+    background:var(--blue); color:#fff; transition:.15s;
+  }
+  .btn:hover{background:var(--navy-2);}
+  .btn:disabled{background:#B7C1D1; cursor:not-allowed;}
+  .btn.secondary{background:#fff; color:var(--blue); border:1.5px solid var(--blue);}
+  .btn.secondary:hover{background:var(--blue-light);}
+  .btn.export{background:var(--ok);}
+  .btn.export:hover{background:#2F6E44;}
+  .actions-row{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
 
-.zone-chip{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11px;
-  font-weight:600;
-  padding:4px 8px;
-  border-radius:20px;
-  background:#EEF1F8;
-  color:var(--navy);
-  white-space:nowrap;
-  cursor:text;
-  outline:none;
-  border:1px solid transparent;
-}
-.zone-chip:focus{border-color:var(--navy);}
-.zone-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .status-line{font-size:13px; color:var(--muted); margin-top:10px; min-height:18px;}
+  .status-line.error{color:#B23A48; font-weight:600;}
+  .status-line.ok{color:var(--ok); font-weight:600;}
 
-.name-cell{
-  min-width:150px;
-  font-weight:600;
-  outline:none;
-  border-radius:6px;
-  padding:2px 4px;
-}
-.name-cell:focus{background:#EEF1F8;}
-.role-tag{
-  display:block;
-  font-size:10px;
-  color:var(--sub);
-  font-weight:500;
-  margin-top:1px;
-}
+  table.people{width:100%; border-collapse:collapse; font-size:12.8px;}
+  table.people th, table.people td{
+    border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:middle;
+  }
+  table.people thead th{
+    background:var(--navy-2); color:#fff; font-weight:600; font-size:11.5px;
+    text-transform:uppercase; letter-spacing:.3px; position:sticky; top:0;
+  }
+  table.people tbody tr:nth-child(even){background:#FAFBFD;}
+  table.people input[type=text], table.people select{
+    width:100%; border:1px solid var(--line); border-radius:5px; padding:4px 6px; font-size:12.5px;
+    font-family:inherit; background:#fff;
+  }
+  table.people .week-head td{
+    background:var(--blue-light); font-weight:700; color:var(--navy-2); padding:8px;
+  }
+  .day-cell{white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .day-cell .fr{color:var(--muted); font-size:11px;}
+  .day-cell .ma{color:var(--ma); font-weight:700;}
+  .day-cell .arrow{color:#B9C1CE; margin:0 2px;}
+  .tag-off{color:var(--muted); font-style:italic;}
+  .tag-conge{color:var(--ok); font-weight:600;}
+  .tag-ferie{color:var(--warn); font-weight:600;}
+  .tag-mission{color:#8A7000; font-weight:600;}
+  .tag-presse{color:#8A7000; font-weight:600;}
+  .role-manager{background:#DCEFD9 !important;}
+  .table-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px;}
 
-.shift-cell{
-  cursor:pointer;
-  border-radius:8px;
-  padding:6px 8px 8px 8px;
-  min-width:92px;
-  text-align:center;
-  transition:background .12s;
-}
-.shift-cell:hover{background:#F0F3FB;}
-.shift-cell .time-text{
-  font-family:'IBM Plex Mono',monospace;
-  font-size:11.5px;
-  font-weight:600;
-  white-space:nowrap;
-}
-.shift-cell .status-text{
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.2px;
-}
-.shift-cell .bar-track{
-  margin-top:5px;
-  height:4px;
-  border-radius:3px;
-  background:#E7E9F1;
-  position:relative;
-  overflow:hidden;
-}
-.shift-cell .bar-fill{
-  position:absolute;
-  top:0;bottom:0;
-  border-radius:3px;
-}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:var(--muted);}
+  .legend span.dot{display:inline-block; width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
 
-.status-off .status-text{color:var(--rose);}
-.status-conge .status-text{color:var(--sage);}
-.status-mission .status-text{color:var(--amber);}
-.status-presse .status-text{color:var(--gold);}
-.status-maladie .status-text{color:var(--sky);}
-.status-off{background:var(--rose-soft);}
-.status-conge{background:var(--sage-soft);}
-.status-mission{background:var(--amber-soft);}
-.status-presse{background:var(--gold-soft);}
-.status-maladie{background:var(--sky-soft);}
-.status-teletravail{background:var(--violet-soft);}
-
-.editable-txt{
-  outline:none;
-  min-width:34px;
-  display:inline-block;
-  border-radius:6px;
-  padding:2px 5px;
-}
-.editable-txt:focus{background:#EEF1F8;}
-.small-col{min-width:56px;text-align:center;}
-.comment-col{min-width:140px;}
-
-.rowdel{
-  border:none;
-  background:transparent;
-  color:#C7CCDA;
-  cursor:pointer;
-  font-size:15px;
-  line-height:1;
-  padding:2px 6px;
-  border-radius:6px;
-}
-.rowdel:hover{color:var(--rose);background:var(--rose-soft);}
-.rowcopy,.rowpaste{border:none;background:transparent;cursor:pointer;font-size:14px;line-height:1;padding:2px 5px;border-radius:6px;margin-right:2px;}
-.rowcopy:hover,.rowpaste:hover{background:#EEF1F8;}
-
-.stat-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:0;}
-.stat-table td, .stat-table th{border:1px solid var(--line);padding:7px 10px;}
-.stat-table th{background:#F7F8FC;color:var(--navy);text-align:left;font-size:11px;text-transform:uppercase;}
-.stat-table td.editable-txt{text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600;}
-
-.activite-chip{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;
-  background:var(--navy);color:#fff;white-space:nowrap;
-}
-
-/* Popover editor */
-.backdrop{
-  position:fixed;inset:0;
-  background:rgba(21,24,41,.28);
-  z-index:100;
-  display:none;
-}
-.backdrop.show{display:block;}
-.popover{
-  position:fixed;
-  z-index:101;
-  width:290px;
-  background:var(--card);
-  border-radius:14px;
-  box-shadow:0 20px 50px rgba(15,20,40,.35);
-  padding:16px;
-  display:none;
-  font-size:13px;
-  border:1px solid var(--line);
-}
-.popover.show{display:block;}
-.popover h3{
-  font-family:'Space Grotesk',sans-serif;
-  font-size:14px;
-  margin:0 0 3px 0;
-  color:var(--navy);
-}
-.popover .pop-sub{font-size:11.5px;color:var(--sub);margin-bottom:12px;}
-.status-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:7px;
-  margin-bottom:14px;
-}
-.status-btn{
-  border:1.5px solid var(--line);
-  background:#fff;
-  border-radius:9px;
-  padding:8px 6px;
-  font-weight:700;
-  font-size:12px;
-  cursor:pointer;
-  text-align:center;
-}
-.status-btn.active{border-color:currentColor;}
-.status-btn.st-work{color:var(--teal);}
-.status-btn.st-work.active{background:var(--teal-soft);}
-.status-btn.st-off{color:var(--rose);}
-.status-btn.st-off.active{background:var(--rose-soft);}
-.status-btn.st-conge{color:var(--sage);}
-.status-btn.st-conge.active{background:var(--sage-soft);}
-.status-btn.st-mission{color:var(--amber);}
-.status-btn.st-mission.active{background:var(--amber-soft);}
-.status-btn.st-presse{color:var(--gold);}
-.status-btn.st-presse.active{background:var(--gold-soft);}
-.status-btn.st-teletravail{color:var(--violet);}
-.status-btn.st-teletravail.active{background:var(--violet-soft);}
-.status-btn.st-maladie{color:var(--sky);}
-.status-btn.st-maladie.active{background:var(--sky-soft);}
-
-.time-block{display:none;}
-.time-block.show{display:block;}
-.time-row{margin-bottom:12px;}
-.time-row label{
-  display:flex;justify-content:space-between;
-  font-size:11.5px;font-weight:600;color:var(--sub);
-  margin-bottom:5px;
-}
-.time-row label span.val{
-  font-family:'IBM Plex Mono',monospace;
-  color:var(--navy);font-weight:700;font-size:12.5px;
-}
-.time-btn-grid{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:5px;
-}
-.time-btn{
-  border:1.5px solid var(--line);
-  background:#fff;
-  color:var(--navy);
-  border-radius:7px;
-  padding:6px 2px;
-  font-family:'IBM Plex Mono',monospace;
-  font-weight:600;
-  font-size:11px;
-  cursor:pointer;
-  text-align:center;
-}
-.time-btn:hover{background:#F0F3FB;}
-.time-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
-.preview-track{
-  height:8px;background:#E7E9F1;border-radius:5px;position:relative;margin:10px 0 6px 0;overflow:hidden;
-}
-.preview-fill{position:absolute;top:0;bottom:0;background:var(--navy);border-radius:5px;}
-.pop-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
-
-@media (max-width:720px){
-  .appbar .sub{display:none;}
-  table.plan{min-width:1000px;}
-}
+  footer.note{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12px;line-height:1.6;}
+  .empty-hint{color:var(--muted); font-size:13px; padding:10px 2px;}
 </style>
 </head>
 <body>
 
-<div class="appbar">
-  <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S28</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
-  <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
-  <button class="btn btn-primary" id="exportBtn">⬇ Exporter (heure MA)</button>
-  <button class="btn btn-primary" id="exportFrBtn">⬇ Exporter (heure FR)</button>
-  <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build multi-activités-v1</div>
-</div>
+<header class="app">
+  <h1>Convertisseur de plannings — Timesquare (FR) → Excel (Maroc)</h1>
+  <p>Dépose un ou plusieurs PDF Timesquare — anciens exports « Plannings individuels » ou nouveaux exports « Plannings périodiques » (tableau par tâche). L'outil lit les créneaux, les convertit à l'heure marocaine (HM = HF − 1h) et génère un Excel semaine par semaine.</p>
+  <div class="tz-badge">
+    <span class="fr">France (UTC+2 été)</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    <span class="ma">Maroc (UTC+1) · −1h</span>
+  </div>
+</header>
 
-<div class="tabs proj-tabs" id="projTabs">
-  <div class="tab active" data-project="googleleads">Google Leads</div>
-  <div class="tab" data-project="accessibilite">Accessibilité</div>
-  <div class="tab" data-project="afedim">AFEDIM</div>
-  <div class="tab" data-project="cmleasing">CM Leasing</div>
-  <div class="tab" data-project="dac">DAC</div>
-  <div class="tab" data-project="facto">Facto</div>
-  <div class="tab" data-project="tlv">TLV</div>
-  <div class="tab" data-project="glf">GLF</div>
-  <div class="tab" data-project="ebra">Ebra</div>
-  <div class="tab" data-project="mentionbac">Mention Bac</div>
-  <div class="tab tab-complet" data-project="complet">📊 Planning complet</div>
-</div>
+<main>
 
-<div class="tabs subtabs" id="subtabsBar">
-  <div class="tab active" data-tab="managers">Managers &amp; GF</div>
-  <div class="tab" data-tab="pause">Pause déjeuner</div>
-  <div class="tab" data-tab="zones">Planning zones</div>
-</div>
+  <div class="card">
+    <h2><span class="num">1</span>Importer les PDF</h2>
+    <p class="sub">Un PDF par personne et par semaine (export Timesquare classique), ou un PDF multi-pages regroupant plusieurs personnes — chaque page est analysée indépendamment.</p>
+    <div id="dropzone">
+      <p><strong>Cliquer pour choisir</strong> ou glisser-déposer un ou plusieurs fichiers .pdf ici</p>
+      <p>Le nom du projet lu dans le PDF (Accessibilité, ou tout autre) n'est jamais utilisé pour filtrer — tous les projets sont supportés.</p>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf" multiple>
+    <div id="fileList"></div>
+    <div class="actions-row">
+      <button class="btn" id="analyzeBtn" disabled>Analyser les PDF</button>
+      <button class="btn secondary" id="clearBtn">Tout effacer</button>
+    </div>
+    <div class="status-line" id="status1"></div>
+  </div>
 
-<div class="panel">
-
-  <div class="tabview active" id="view-managers">
-    <div class="card">
-      <div class="card-head">
-        <h2>Managers et GF</h2>
-        <div class="hint">Semaine du lundi au dimanche · clique une case horaire pour changer le statut ou glisser les curseurs d'heure</div>
-      </div>
-      <div class="table-scroll"><table class="plan" id="table-managers"></table></div>
+  <div class="card" id="reviewCard" style="display:none;">
+    <h2><span class="num">2</span>Vérifier &amp; compléter</h2>
+    <p class="sub">Les horaires marocains sont calculés automatiquement. Complète la Zone, le Rôle (Collaborateur / Manager), le code TT et le commentaire pour chaque ligne avant l'export — comme dans ton fichier Excel de suivi.</p>
+    <div class="table-scroll">
+      <table class="people" id="peopleTable">
+        <thead>
+          <tr>
+            <th>Semaine</th>
+            <th>Nom</th>
+            <th>Zone</th>
+            <th>Rôle</th>
+            <th>Lun</th><th>Mar</th><th>Mer</th><th>Jeu</th><th>Ven</th><th>Sam</th><th>Dim</th>
+            <th>Total</th>
+            <th>TT</th>
+            <th>Commentaire</th>
+          </tr>
+        </thead>
+        <tbody id="peopleBody"></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="background:#DCEFD9"></span>Manager</span>
+      <span><span class="dot" style="background:#F2DCA6"></span>OFF / Repos</span>
+      <span><span class="dot" style="background:#D9EAD3"></span>Congé</span>
+      <span><span class="dot" style="background:#D9D9D9"></span>Férié</span>
+      <span><span class="dot" style="background:#FFF200"></span>Missionnée / Presse</span>
+      <span style="color:var(--muted)">gris = heure France · <span style="color:var(--ma);font-weight:600">rouge = heure Maroc (−1h)</span></span>
     </div>
   </div>
 
-  <div class="tabview" id="view-pause">
-    <div class="card">
-      <div class="card-head">
-        <h2>Planning pause déjeuner</h2>
-        <div class="hint">Début / fin de pause pour chaque collaborateur</div>
-      </div>
-      <div class="table-scroll"><table class="plan" id="table-pause"></table></div>
+  <div class="card" id="exportCard" style="display:none;">
+    <h2><span class="num">3</span>Générer le fichier Excel</h2>
+    <p class="sub">Le fichier généré contient deux feuilles : « Plannings (heure Maroc) » (shifts complets) et « Planning pause déjeuner » — dans la mise en page Zones / Collaborateur / D P / FP par jour, comme ton fichier de suivi actuel.</p>
+    <div class="actions-row">
+      <button class="btn export" id="exportBtn">⭳ Télécharger le fichier Excel (heure Maroc)</button>
     </div>
+    <div class="status-line" id="status2"></div>
   </div>
 
-  <div class="tabview" id="view-zones">
-    <div class="card">
-      <div class="card-head">
-        <h2>Planning zones — collaborateurs</h2>
-        <div class="hint">Horaires de shift par zone</div>
-      </div>
-      <div class="table-scroll"><table class="plan" id="table-zones"></table></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h2>Synthèse journalière</h2><div class="hint">Modifiable, clique un chiffre pour le changer</div></div>
-      <div class="table-scroll"><table class="stat-table" id="table-stats"></table></div>
-    </div>
-  </div>
+</main>
 
-  <div class="tabview" id="view-complet">
-    <div class="card">
-      <div class="card-head">
-        <h2>Planning complet — toutes les activités</h2>
-        <div class="hint">Vue en lecture seule, recalculée automatiquement à partir des plannings Managers &amp; GF + Planning zones de chaque activité</div>
-      </div>
-      <div class="table-scroll"><table class="plan complet" id="table-complet"></table></div>
-    </div>
-  </div>
-
-</div>
-
-<div class="backdrop" id="backdrop"></div>
-<div class="popover" id="popover">
-  <h3 id="popTitle">Modifier</h3>
-  <div class="pop-sub" id="popSub"></div>
-  <div class="status-grid" id="statusGrid"></div>
-  <div class="time-block" id="timeBlock">
-    <div class="preview-track"><div class="preview-fill" id="previewFill"></div></div>
-    <div class="time-row">
-      <label>Début</label>
-      <div class="time-btn-grid" id="startBtnGrid"></div>
-    </div>
-    <div class="time-row">
-      <label>Fin</label>
-      <div class="time-btn-grid" id="endBtnGrid"></div>
-    </div>
-  </div>
-  <div class="pop-actions" style="flex-wrap:wrap;gap:8px">
-    <button class="btn btn-ghost" style="color:#fff;background:var(--navy)" id="popApplyWeek" title="Copier ce jour sur toute la semaine de ce collaborateur">📅 Appliquer à toute la semaine</button>
-    <button class="btn btn-ghost" style="color:var(--navy);background:#EEF1F8" id="popClose">Fermer</button>
-  </div>
-</div>
+<footer class="note">
+  Fonctionnement : tout le traitement (lecture PDF, conversion, export) se fait dans ton navigateur — aucun fichier n'est envoyé à un serveur.
+  Ce convertisseur reconnaît la structure standard des exports « Plannings individuels » (Timesquare v2) : nom, semaine « Du … au … (n°) », lignes de jour « lun. jj/mm/aaaa », statuts Repos / Congé / Férié, et le total « BC : ». Il ignore volontairement le libellé du projet (Accessibilité, etc.) afin de fonctionner pour n'importe quel projet.
+</footer>
 
 <script>
-/* ---------------- CONFIG ---------------- */
-const DAY_MIN = 6*60;      // 06:00
-const DAY_MAX = 22*60;     // 22:00
-const STEP = 15;           // minutes
-const DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
-const DATES = ['06 juillet 2026','07 juillet 2026','08 juillet 2026','09 juillet 2026','10 juillet 2026','11 juillet 2026','12 juillet 2026'];
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const STATUS = {
-  work:   {label:'Travail',     cls:''},
-  teletravail:{label:'Télétravail', cls:'status-teletravail'},
-  off:    {label:'OFF',         cls:'status-off'},
-  conge:  {label:'Congé',       cls:'status-conge'},
-  maladie:{label:'Maladie',     cls:'status-maladie'},
-  mission:{label:'Missionnée',  cls:'status-mission'},
-  presse: {label:'Presse',      cls:'status-presse'}
-};
-const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', off:'#D9534F', conge:'#3F8F5E', maladie:'#2F7FB5', mission:'#DB8A2A', presse:'#C9A227'};
-const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', off:'FFFBE7E6', conge:'FFE4F3E8', maladie:'FFE1EEF7', mission:'FFFCEBD6', presse:'FFFAF1CE'};
-/* Statuts qui affichent un horaire (début–fin) au lieu d'un simple libellé */
-function isWorkLike(status){ return status==='work' || status==='teletravail' || status==='mission'; }
+// ---------- Time helpers ----------
+function timeToMinutes(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function minutesToTime(m){ m=((m%1440)+1440)%1440; const h=Math.floor(m/60); const mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+function shiftMinus1h(t){ return t ? minutesToTime(timeToMinutes(t)-60) : null; }
 
-function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
-function minToTime(m){ const h=Math.floor(m/60).toString().padStart(2,'0'); const mm=(m%60).toString().padStart(2,'0'); return h+':'+mm; }
-function d(status,start,end){ return {status, start:start||null, end:end||null}; }
-function w(s,e){ return d('work', s, e); }
-const OFF = d('off'), CONGE = d('conge'), MISSION = d('mission'), PRESSE = d('presse');
+const DAY_ABBR = ['lun','mar','mer','jeu','ven','sam','dim'];
+const DAY_FULL = {lun:'Lundi',mar:'Mardi',mer:'Mercredi',jeu:'Jeudi',ven:'Vendredi',sam:'Samedi',dim:'Dimanche'};
 
-function zoneColor(zone){
-  const palette = ['#1F7A6C','#DB8A2A','#3F6BB0','#B0555E','#7A5FB0','#C9A227','#3F8F5E','#4C7EA8','#A8654C'];
-  let h=0; for(let i=0;i<zone.length;i++) h = (h*31 + zone.charCodeAt(i)) % 997;
-  return palette[h % palette.length];
+function frDateToJs(s){
+  const [d,m,y] = s.split('/').map(Number);
+  return new Date(y, m-1, d);
+}
+function jsDateToFr(d){
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
 
-/* ---------------- PROJECTS ---------------- */
-const PROJECTS = ['googleleads','accessibilite','afedim','cmleasing','dac','facto','tlv','glf','ebra','mentionbac'];
-const PROJECT_LABELS = {
-  googleleads:'Google Leads',
-  accessibilite:'Accessibilité',
-  afedim:'AFEDIM',
-  cmleasing:'CM Leasing',
-  dac:'DAC',
-  facto:'Facto',
-  tlv:'TLV',
-  glf:'GLF',
-  ebra:'Ebra',
-  mentionbac:'Mention Bac'
-};
+// ---------- Core parser ----------
+// Note : selon les exports Timesquare, l'en-tête « Du ... au ... (n°) » peut apparaître
+// soit deux fois de façon complète pour une même personne (en-tête + ligne répétée),
+// soit une seule fois complète suivie d'une répétition TRONQUÉE (ex: « Du lundi 20/07/2026
+// (30) au dimanche » sans date de fin ni numéro). Le parseur gère les deux cas.
+function parsePersonBlocksFromPage(rawText){
+  const text = rawText.replace(/\s+/g,' ').trim();
+  const weekRe = /Du\s+([A-Za-zéûèêîôàç]+)\s+(\d{2}\/\d{2}\/\d{4})\s*\((\d{1,2})\)\s*au\s+([A-Za-zéûèêîôàç]+)\s+(\d{2}\/\d{2}\/\d{4})\s*\((\d{1,2})\)/gi;
+  const weekMatches = [...text.matchAll(weekRe)];
+  if(weekMatches.length===0) return [];
 
-/* ---------------- DATA : Google Leads (activité déjà construite) ---------------- */
-const gl_managers = [
-  {zone:'ZONE8', role:'Manager', name:'OUAQERROUCH NOUR-EL HOUDA', days:[CONGE,CONGE,w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),OFF,OFF], comment:'RAS'},
-  {zone:'ZONE8', role:'GF', name:'ARBOUBBA OUMAIMA', days:[w('7:00','16:00'),w('7:00','11:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),OFF,OFF], comment:'RAS'},
-  {zone:'ZONE4', role:'Manager', name:'HAOUACH Ikram', days:[w('7:00','16:00'),OFF,w('10:00','20:00'),w('10:00','20:00'),OFF,w('7:00','16:00'),w('13:00','20:00')], comment:'RAS'}
-];
+  const dayReGlobal = /(lun|mar|mer|jeu|ven|sam|dim)\.\s*(\d{2}\/\d{2}\/\d{4})/gi;
 
-const gl_pause = [
-  {zone:'ZONE7', name:'EL AOUAQUI Bouchra', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE4', name:'IHASSANE Ikram', days:[MISSION,MISSION,MISSION,MISSION,MISSION,MISSION,w('12:00','13:00')]},
-  {zone:'ZONE5', name:'NIANG NDEYE ABSA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'ZONE2', name:'ZAKI OMAR', days:[w('12:00','13:00'),w('13:00','14:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE5', name:'EL HOUSSAINI HOUDA', days:[w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF]},
-  {zone:'ZONE5', name:'EL HARROUCHI CHAIMAE', days:[w('12:00','13:00'),w('14:00','15:00'),w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE3', name:'LAFDIL NADA', days:[w('12:00','13:00'),w('14:00','15:00'),OFF,OFF,OFF,w('12:00','13:00'),OFF]},
-  {zone:'ZONE3', name:'GUEYE MOUHAMED', days:[OFF,OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('14:00','15:00'),w('12:00','13:00')]},
-  {zone:'ZONE5', name:'RACHAD NAWAR', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE7', name:'ZITOUNI LAMYA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE3', name:'GUEYE GORA', days:[w('14:00','15:00'),w('12:00','13:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'ZONE3', name:'DIOUF OUSSMANE', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE4', name:'DERKAOUI AMAL', days:[CONGE,CONGE,CONGE,CONGE,CONGE,OFF,OFF]},
-  {zone:'ZONE1', name:'AIT LARBI HIND', days:[PRESSE,w('13:00','14:00'),OFF,w('12:00','13:00'),w('13:00','14:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE6', name:'TOURE ABIBOU', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE7', name:'KANTAOUI SALMA', days:[PRESSE,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE3', name:'ZIOUI DOUNIA', days:[PRESSE,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'AIT ADDI KHADIJA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'MELLAHI YOUSSEF', days:[w('12:00','13:00'),OFF,OFF,w('13:00','14:00'),w('13:00','14:00'),w('12:00','13:00'),w('12:00','13:00')]},
-  {zone:'ZONE6', name:'EL HOUJJAJI Soufiane', days:[w('13:00','14:00'),w('13:00','14:00'),OFF,OFF,w('13:00','14:00'),w('13:00','14:00'),w('12:00','13:00')]},
-  {zone:'ZONE2', name:'AZHARI ABDELHAMID', days:[w('12:00','13:00'),OFF,OFF,w('12:00','13:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE4', name:'NUNEZ LUCIEN BERNARD', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'ZONE1', name:'LALOUN MANAL', days:[w('12:00','13:00'),w('12:00','13:00'),CONGE,CONGE,CONGE,OFF,OFF]},
-  {zone:'ZONE8', name:'SIDIBE MOUSKEBA DALAFINA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,w('14:00','15:00')]},
-  {zone:'ZONE2', name:'BOULHROUD SALMA', days:[OFF,w('12:00','13:00'),OFF,OFF,OFF,w('14:00','15:00'),w('14:00','15:00')]},
-  {zone:'ZONE6', name:'BOURABAA HASSAN', days:[w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE3', name:'SECK DIARRA', days:[w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00')]},
-  {zone:'ZONE4', name:'AINELKITANE ZINEB', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'ZONE3', name:'BENSAR ANAS', days:[OFF,OFF,w('14:00','15:00'),OFF,w('14:00','15:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE5', name:'NEMMAOUI MOUNIRA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'QARBOUI Aymane', days:[OFF,OFF,w('12:00','13:00'),w('12:00','13:00'),w('14:00','15:00'),w('14:00','15:00'),OFF]},
-  {zone:'ZONE3', name:'SOUOUD ZAKARIA', days:[w('14:00','15:00'),OFF,OFF,w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]}
-];
+  const results = [];
+  let i = 0;
+  while(i < weekMatches.length){
+    const first = weekMatches[i];
 
-const gl_zones = [
-  {zone:'ZONE7', name:'EL-AOUAQUI Bouchra', days:[w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'IHASSANE Ikram', days:[MISSION,MISSION,MISSION,MISSION,MISSION,MISSION,w('7:00','17:00')], heures:'9:00:00', comment:'Missionnée Mention BAC'},
-  {zone:'ZONE5', name:'NIANG NDEYE ABSA', days:[w('10:00','20:00'),w('11:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'ZAKI OMAR', days:[w('7:00','17:00'),w('8:00','18:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('8:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'EL HOUSSAINI HOUDA', days:[w('10:00','20:00'),w('11:00','20:00'),OFF,w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'EL HARROUCHI CHAIMAE', days:[w('7:00','17:00'),w('11:00','20:00'),w('7:00','17:00'),OFF,w('7:00','17:00'),w('7:00','17:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'LAFDIL NADA', days:[w('7:00','17:00'),w('11:00','20:00'),w('7:00','17:00'),OFF,w('7:00','17:00'),w('7:00','17:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'GUEYE MOUHAMED', days:[OFF,OFF,w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('10:00','20:00'),w('7:00','16:00')], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'RACHAD NAWAR', days:[w('7:00','17:00'),OFF,w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'ZITOUNI LAMYA', days:[w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'GUEYE GORA', days:[w('10:00','20:00'),OFF,w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('11:00','20:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'DIOUF OUSSMANE', days:[w('7:00','17:00'),OFF,w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'DERKAOUI AMAL', days:[CONGE,CONGE,CONGE,CONGE,CONGE,OFF,OFF], heures:'0:00:00', comment:'Congé payé'},
-  {zone:'ZONE1', name:'AIT LARBI HIND', days:[w('15:00','17:00'),w('8:00','17:00'),OFF,w('7:00','17:00'),w('7:00','17:00'),w('8:00','18:00'),OFF], heures:'36:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'TOURE ABIBOU', days:[w('8:00','18:00'),w('8:00','17:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'KANTAOUI SALMA', days:[w('15:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF], heures:'36:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'ZIOUI DOUNIA', days:[w('15:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF], heures:'36:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'AIT ADDI KHADIJA', days:[w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'MELLAHI YOUSSEF', days:[w('7:00','17:00'),OFF,OFF,w('8:00','18:00'),w('8:00','18:00'),w('7:00','16:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'EL HOUJJAJI Soufiane', days:[w('8:00','18:00'),w('8:00','18:00'),OFF,OFF,w('8:00','18:00'),w('7:00','17:00'),w('7:00','17:00')], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'AZHARI ABDELHAMID', days:[w('7:00','17:00'),w('8:00','17:00'),OFF,w('7:00','17:00'),w('8:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'NUNEZ LUCIEN BERNARD', days:[w('10:00','20:00'),w('11:00','20:00'),OFF,w('10:00','20:00'),w('10:00','20:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE1', name:'LALOUN MANAL', days:[w('7:00','17:00'),w('8:00','17:00'),CONGE,CONGE,CONGE,OFF,w('10:00','20:00')], heures:'17:00:00', comment:'Congé payé'},
-  {zone:'ZONE8', name:'SIDIBE MOUSKEBA DALAFINA', days:[w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),OFF,OFF,w('10:00','20:00')], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'BOULHROUD SALMA', days:[OFF,w('7:00','16:00'),w('7:00','17:00'),w('7:00','17:00'),w('10:00','20:00'),w('11:00','20:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'BOURABAA HASSAN', days:[w('8:00','18:00'),w('8:00','18:00'),OFF,w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'SECK DIARRA', days:[w('10:00','20:00'),OFF,w('10:00','20:00'),OFF,w('10:00','20:00'),w('10:00','20:00'),w('11:00','20:00')], heures:'45:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'AINELKITANE ZINEB', days:[w('10:00','20:00'),w('11:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'BENSAR ANAS', days:[OFF,OFF,w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('7:00','16:00')], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'NEMMAOUI MOUNIRA', days:[w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'QARBOUI Aymane', days:[OFF,OFF,w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('10:00','20:00'),w('10:00','20:00')], heures:'45:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'SOUOUD ZAKARIA', days:[w('10:00','20:00'),OFF,OFF,w('10:00','20:00'),w('10:00','20:00'),w('10:00','20:00'),OFF], heures:'44:00:00', comment:'RAS'}
-];
+    // Cherche le premier marqueur de jour après ce match d'en-tête
+    dayReGlobal.lastIndex = first.index + first[0].length;
+    const dayProbe = dayReGlobal.exec(text);
+    const dayStart = dayProbe ? dayProbe.index : text.length;
 
-const gl_stats = {
-  ouverture:[12,6,13,15,14,6,5],
-  renfort:[3,0,0,0,0,0,0],
-  middle:[3,7,1,4,5,0,0],
-  middlePlus:[0,0,0,0,0,0,0],
-  fermeture:[8,7,8,9,8,7,4]
-};
-
-/* ---------------- DATA : Accessibilité ---------------- */
-const ac_managers = [
-  {zone:'ZONE7', role:'Manager', name:'OUBRAHIM MOHAMMED', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'}
-];
-const ac_pause = [];
-const ac_zones = [
-  {zone:'ZONE6', name:'LISSAOUI HIBA', days:[w('8:00','18:00'),OFF,OFF,w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'26:00:00', comment:'Congé payé'},
-  {zone:'ZONE5', name:'RMAIDI IMAD', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'Télétravail'},
-  {zone:'ZONE4', name:'HAMDANI MOHAMED', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
-];
-const ac_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : AFEDIM ---------------- */
-const af_managers = [
-  {zone:'ZONE7', role:'Manager', name:'HMIDOUCH FOUAD', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'}
-];
-const af_pause = [];
-const af_zones = [
-  {zone:'ZONE4', name:'RADGUI SARA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'BOUMEZGANE SOUKAINA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'BENHAMMOU ALAE EDDINE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'SIMOUR KHALIL', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'EL MASSAOUDI Houssam', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'EL JEBBOURI OMAR', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
-];
-const af_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : CM Leasing ---------------- */
-const cm_managers = [];
-const cm_pause = [];
-const cm_zones = [
-  {zone:'ZONE5', name:'AIT RABIAA NOUHAILA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'EL MAHJOUBI ABDESSATAR', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'IDELHAJ Meriem', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'LEHMOUCH NOUHAILA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'NOUIBI CHAIMAE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'ESSABERY ISMAIL', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'AKHSASS MAJDA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'JALAL NABILA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'LAKHAL MEHDI', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'SAADA LINA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'HMIDI KHADIJA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'ELOUAHHABY DOUAAE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
-];
-const cm_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : DAC ---------------- */
-const dac_managers = [];
-const dac_pause = [];
-const dac_zones = [
-  {zone:'ZONE8', name:'TAOUIL AYA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE8', name:'MBENE GUEYE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'ZERZOURI LAMIAE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'ALAMI-AROUSSI AHMED', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'ES-SAHLI MARYAM', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'SY FATIMA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
-];
-const dac_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : Facto ---------------- */
-const facto_managers = [];
-const facto_pause = [
-  {zone:'ZONE1', name:'BARA HAJAR', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
-  {zone:'ZONE4', name:'EL MOUBARIK OUMNIA', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
-  {zone:'ZONE3', name:'DAMI OUMAIMA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'INTAJ IMANE', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]}
-];
-const facto_zones = [
-  {zone:'ZONE1', name:'BARA HAJAR', days:[w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','16:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 12h-12h30)'},
-  {zone:'ZONE4', name:'EL MOUBARIK OUMNIA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),w('8:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 13h30-14h30)'},
-  {zone:'ZONE3', name:'DAMI OUMAIMA', days:[w('7:00','17:00'),w('7:00','17:00'),w('7:00','17:00'),w('7:00','16:00'),w('7:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 12h-13h)'},
-  {zone:'ZONE5', name:'INTAJ IMANE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'Rotation 4 agents (pause 13h-14h)'}
-];
-const facto_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : TLV ---------------- */
-const tlv_managers = [];
-const tlv_pause = [];
-const tlv_zones = [
-  {zone:'ZONE6', name:'SYLLA SOKHNA SAFIETOU', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'ABDELAOUI KHADIJA', days:[OFF,w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','14:00'),OFF], heures:'40:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'DIOP MAMADOU MOUSTAPHA DOKY', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'AZIANE YASSINE', days:[w('8:00','18:00'),w('9:00','18:00'),w('9:00','18:00'),w('9:00','18:00'),w('10:00','18:00'),OFF,OFF], heures:'40:00:00', comment:'RAS'}
-];
-const tlv_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : GLF (collaborateurs réels) ---------------- */
-const glf_managers = [
-  {zone:'TRSPT KO', role:'Manager', name:'EL KAOUTAR Fatima Zahra', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),OFF,OFF], comment:'RAS'}
-];
-const glf_pause = [
-  {zone:'ZONE4', name:'NDIAYE SEYNABOU', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
-  {zone:'ZONE1', name:'KANDI FATIMA ZAHRA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE6', name:'SANE MOHAMMED LAMINE', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
-  {zone:'ZONE3', name:'HABBOUB KARIM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE1', name:"M'BARKI IMANE", days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
-  {zone:'ZONE4', name:'MBOUP EL HADJI CHEIKH', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE6', name:'NGOM SALIOU', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
-  {zone:'ZONE5', name:'EL AMRANI ABDELMOUGHIT', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE3', name:'OUCHENE ZAKARIA', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
-  {zone:'ZONE8', name:'GUESSAR ZAHRA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'HAMMADI AYA', days:[w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),w('12:30','13:30'),OFF,OFF]},
-  {zone:'ZONE5', name:'EL HASROUF YOUSSEF', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE1', name:'ZIRARI CHAIMAA', days:[w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),w('13:30','14:30'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'SEMBENE PAPALATY', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]}
-];
-const glf_zones = [
-  {zone:'ZONE4', name:'NDIAYE SEYNABOU', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE1', name:'KANDI FATIMA ZAHRA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'SANE MOHAMMED LAMINE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'HABBOUB KARIM', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE1', name:"M'BARKI IMANE", days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'MBOUP EL HADJI CHEIKH', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'NGOM SALIOU', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'EL AMRANI ABDELMOUGHIT', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'OUCHENE ZAKARIA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE8', name:'GUESSAR ZAHRA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'HAMMADI AYA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'EL HASROUF YOUSSEF', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE1', name:'ZIRARI CHAIMAA', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'SEMBENE PAPALATY', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
-];
-const glf_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : Ebra ---------------- */
-const ebra_managers = [
-  {zone:'ZONE8', role:'Manager', name:'EL BAHLOULY DOHA', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('7:00','11:00'),OFF], comment:'RAS'},
-  {zone:'TRSPT KO', role:'Manager', name:'CHOUIFI MUSTAPHA', days:[w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('8:00','17:00'),w('7:00','11:00'),OFF], comment:'RAS'},
-  {zone:'TRSPT KO', role:'Manager', name:'MOUNAJI SOUKAINA', days:[w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),OFF,OFF], comment:'RAS'}
-];
-const ebra_pause = [
-  {zone:'ZONE8', name:'EL BAHLOULY DOHA', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'CHOUIFI MUSTAPHA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('13:30','14:30'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'MOUNAJI SOUKAINA', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('12:30','13:30'),OFF,OFF]},
-  {zone:'ZONE4', name:'EL IDRISSI ELHASSANI MAHA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE3', name:'BOUABDILLAH ZAKARIA', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE6', name:'EL GUARJAOUI HIBA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE3', name:'LIMANE HIBA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE6', name:'HAMDOUNI YASSER', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE7', name:'CHAYAH CHAIMAE', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE3', name:'RHEMARI REDA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE4', name:'GOMIS AMINATA AGNES', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'AMRI ZINEB', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE7', name:'OUERRADI ZOUHAIR', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE2', name:'SBAR SANAE', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'BOULLOUH HADDOU', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE6', name:'MESKOURI NABILA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'BENMOUSSA EL MEHDI YASSIN', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'CHAMKHA NOUHAILA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE4', name:'AMEZIANE ZAKARIA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE1', name:'AIT ELMAHJOUB TAOUFIQ', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE4', name:'AGUILOU MOHAMED', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE5', name:'ZAYER SALMA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE6', name:'AAZAROU BOUTAYNA', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE7', name:'EL OUIKSANI SAMIA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE4', name:'ZAIMI NADA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'ELANMATI LAMIAE', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE6', name:'CISSE OUMAR', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE8', name:'BOCOUM DIAWARIAH', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE4', name:'FAYE ROKHAYA', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'BOUQATA HIBA', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE3', name:'YOUNOUSSI Houda', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE4', name:'EL BASRI NAJIB', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]},
-  {zone:'ZONE5', name:'MERZOUG NASRALLAH', days:[w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),w('11:30','12:30'),OFF,OFF]},
-  {zone:'ZONE6', name:'CISSE SALIOU', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'EL ABBIOUI AYOUB', days:[w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),w('11:00','12:00'),OFF,OFF]}
-];
-const _EBRA_STD = () => [w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','16:00'),w('7:00','11:00'),OFF];
-const ebra_zones = [
-  {zone:'ZONE4', name:'EL IDRISSI ELHASSANI MAHA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'BOUABDILLAH ZAKARIA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'EL GUARJAOUI HIBA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'LIMANE HIBA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'HAMDOUNI YASSER', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'CHAYAH CHAIMAE', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'RHEMARI REDA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'GOMIS AMINATA AGNES', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'AMRI ZINEB', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'OUERRADI ZOUHAIR', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE2', name:'SBAR SANAE', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'BOULLOUH HADDOU', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'MESKOURI NABILA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'BENMOUSSA EL MEHDI YASSIN', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'CHAMKHA NOUHAILA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'AMEZIANE ZAKARIA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE1', name:'AIT ELMAHJOUB TAOUFIQ', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'AGUILOU MOHAMED', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'ZAYER SALMA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'AAZAROU BOUTAYNA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE7', name:'EL OUIKSANI SAMIA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'ZAIMI NADA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'ELANMATI LAMIAE', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'CISSE OUMAR', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE8', name:'BOCOUM DIAWARIAH', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'FAYE ROKHAYA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'BOUQATA HIBA', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE3', name:'YOUNOUSSI Houda', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE4', name:'EL BASRI NAJIB', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE5', name:'MERZOUG NASRALLAH', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE6', name:'CISSE SALIOU', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'EL ABBIOUI AYOUB', days:_EBRA_STD(), heures:'44:00:00', comment:'RAS'}
-];
-const ebra_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-/* ---------------- DATA : Mention Bac ---------------- */
-const mb_managers = [
-  {zone:'ZONE 6', role:'Back-UP Manager', name:'RHOUDANE OTHMANE', days:[w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','18:00'),w('8:00','17:00'),OFF,OFF], comment:'RAS'},
-  {zone:'ZONE 4', role:'Missionnée', name:'IHASSANE IKRAM', days:[OFF,w('9:00','19:00'),w('8:00','18:00'),w('9:00','19:00'),w('10:00','19:00'),w('9:00','19:00'),OFF], comment:'RAS'}
-];
-const mb_pause = [
-  {zone:'ZONE 5', name:'EZZAMET MARWA', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE 5', name:'BENGHANNOU IBTISSAM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE 5', name:'BENGHANNOU IMANE', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'ZONE 7', name:'NAKHLA AYA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE 4', name:'ANISSE MOHAMMED', days:[w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF]},
-  {zone:'ZONE 1', name:'HAJIM YASSINE', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE 4', name:'EL ALAMI AYMAN', days:[w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE 1', name:'BOUCHARA IMANE', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE 4', name:'LYACOUBI HOUDA', days:[w('12:00','13:00'),w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE 4', name:'KINANA WIDAD', days:[w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE 5', name:'CHOUKRI LOUBNA', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE 3', name:'CHAFI SARA', days:[w('13:00','14:00'),OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE 8', name:'BARTOUT AYA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'TRSPT KO', name:'DINI SALWA', days:[w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF]},
-  {zone:'ZONE 1', name:'ATIR RIM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,OFF]},
-  {zone:'ZONE 5', name:'EL-ANAZI AMAL', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),OFF]},
-  {zone:'ZONE 5', name:'YOUSFI HIYAM', days:[w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF,w('13:00','14:00'),OFF]},
-  {zone:'ZONE 3', name:'BARNASSO HAMZA', days:[OFF,w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),w('13:00','14:00'),OFF]},
-  {zone:'ZONE 4', name:'MOULINE SALMA', days:[OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE 4', name:'ERBATI SALMA', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE 4', name:'AJMILA MOUNA', days:[w('12:00','13:00'),OFF,w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF]},
-  {zone:'ZONE 4', name:'BENMESSAOUD ISRAE', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,w('14:00','15:00'),w('14:00','15:00'),OFF]},
-  {zone:'ZONE 1', name:'ZOHRI RANA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE 7', name:'ABILLAT ALAE', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]},
-  {zone:'ZONE 7', name:'ENNOUR AYDA', days:[w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),w('12:00','13:00'),OFF,OFF]},
-  {zone:'ZONE 7', name:'BELMEJDOUB FATIMA ZAHRA', days:[w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),w('14:00','15:00'),OFF,OFF]}
-];
-const mb_zones = [
-  {zone:'ZONE 5', name:'EZZAMET MARWA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 5', name:'BENGHANNOU IBTISSAM', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 5', name:'BENGHANNOU IMANE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 7', name:'NAKHLA AYA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'ANISSE MOHAMMED', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 1', name:'HAJIM YASSINE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'EL ALAMI AYMAN', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 1', name:'BOUCHARA IMANE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'LYACOUBI HOUDA', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'KINANA WIDAD', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 5', name:'CHOUKRI LOUBNA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 3', name:'CHAFI SARA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 8', name:'BARTOUT AYA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'TRSPT KO', name:'DINI SALWA', days:[w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 1', name:'ATIR RIM', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 5', name:'EL-ANAZI AMAL', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 5', name:'YOUSFI HIYAM', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),OFF,w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 3', name:'BARNASSO HAMZA', days:[OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'MOULINE SALMA', days:[OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'ERBATI SALMA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'AJMILA MOUNA', days:[w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 4', name:'BENMESSAOUD ISRAE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),OFF,w('9:00','19:00'),w('9:00','18:00'),OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 1', name:'ZOHRI RANA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','18:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 7', name:'ABILLAT ALAE', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 7', name:'ENNOUR AYDA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'},
-  {zone:'ZONE 7', name:'BELMEJDOUB FATIMA ZAHRA', days:[w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('9:00','19:00'),w('10:00','19:00'),OFF,OFF], heures:'44:00:00', comment:'RAS'}
-];
-const mb_stats = { ouverture:[0,0,0,0,0,0,0], renfort:[0,0,0,0,0,0,0], middle:[0,0,0,0,0,0,0], middlePlus:[0,0,0,0,0,0,0], fermeture:[0,0,0,0,0,0,0] };
-
-
-/* ---------------- ASSEMBLE ---------------- */
-const data = {
-  googleleads:{ managers:gl_managers, pause:gl_pause, zones:gl_zones, stats:gl_stats },
-  accessibilite:{ managers:ac_managers, pause:ac_pause, zones:ac_zones, stats:ac_stats },
-  afedim:{ managers:af_managers, pause:af_pause, zones:af_zones, stats:af_stats },
-  cmleasing:{ managers:cm_managers, pause:cm_pause, zones:cm_zones, stats:cm_stats },
-  dac:{ managers:dac_managers, pause:dac_pause, zones:dac_zones, stats:dac_stats },
-  facto:{ managers:facto_managers, pause:facto_pause, zones:facto_zones, stats:facto_stats },
-  tlv:{ managers:tlv_managers, pause:tlv_pause, zones:tlv_zones, stats:tlv_stats },
-  glf:{ managers:glf_managers, pause:glf_pause, zones:glf_zones, stats:glf_stats },
-  ebra:{ managers:ebra_managers, pause:ebra_pause, zones:ebra_zones, stats:ebra_stats },
-  mentionbac:{ managers:mb_managers, pause:mb_pause, zones:mb_zones, stats:mb_stats }
-};
-
-let currentProject = 'googleleads';
-let currentSubtab = 'managers';
-
-/* IMPORTANT: OFF / CONGE / MISSION / PRESSE / and every w(...) call used above
-   were built once and reused as the SAME object across many cells. Without
-   cloning, editing one cell (e.g. samedi OFF) would mutate every other cell
-   that happens to point at that same shared object. We deep-clone every
-   day-cell right after loading the data so each cell is fully independent. */
-function cloneCells(arr){
-  arr.forEach(row=>{
-    row.days = JSON.parse(JSON.stringify(row.days));
-    // Missions inherit the row's regular working hours so they display like télétravail
-    // (colored background + times) instead of a "Mission" label.
-    const ref = row.days.find(c=>c.status==='work' && c.start && c.end);
-    const defS = ref? ref.start : '8:00';
-    const defE = ref? ref.end : '17:00';
-    row.days.forEach(c=>{ if(c.status==='mission' && !c.start){ c.start = defS; c.end = defE; } });
-  });
-}
-PROJECTS.forEach(pk=>{
-  cloneCells(data[pk].managers);
-  cloneCells(data[pk].pause);
-  cloneCells(data[pk].zones);
-});
-
-/* ---------------- RENDER HELPERS ---------------- */
-function barFillStyle(cellData, colorHex){
-  if(!isWorkLike(cellData.status) || !cellData.start || !cellData.end) return '';
-  const s = Math.max(timeToMin(cellData.start), DAY_MIN);
-  const e = Math.min(timeToMin(cellData.end), DAY_MAX);
-  const total = DAY_MAX - DAY_MIN;
-  const left = ((s-DAY_MIN)/total)*100;
-  const width = Math.max(((e-s)/total)*100, 2);
-  return `left:${left}%;width:${width}%;background:${colorHex};`;
-}
-
-function shiftCellHTML(cellData, rowIdx, dayIdx, tableName, colorHex){
-  const st = STATUS[cellData.status];
-  const inner = isWorkLike(cellData.status)
-    ? `<div class="time-text">${cellData.start}–${cellData.end}</div>`
-    : `<div class="status-text">${st.label}</div>`;
-  const bar = isWorkLike(cellData.status)
-    ? `<div class="bar-track"><div class="bar-fill" style="${barFillStyle(cellData,colorHex)}"></div></div>`
-    : '';
-  return `<td class="shift-cell ${st.cls}" data-table="${tableName}" data-row="${rowIdx}" data-day="${dayIdx}">${inner}${bar}</td>`;
-}
-
-function headerRowHTML(extraCols){
-  let thDates = DAYS.map((dn,i)=>`<th colspan="1">${dn}<div style="font-weight:400;font-size:9.5px;text-transform:none;color:var(--sub);margin-top:2px" contenteditable="true" class="dateedit" data-day="${i}">${DATES[i]}</div></th>`).join('');
-  return `<thead><tr><th>Zone</th><th>Collaborateur</th>${thDates}${extraCols||''}</tr></thead>`;
-}
-
-function renderManagers(){
-  const el = document.getElementById('table-managers');
-  let rows = data[currentProject].managers.map((r,ri)=>{
-    const color = zoneColor(r.zone);
-    let cells = r.days.map((c,di)=>shiftCellHTML(c,ri,di,'managers',color)).join('');
-    return `<tr>
-      <td><span class="zone-chip" contenteditable="true" data-table="managers" data-row="${ri}" data-field="zone"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
-      <td><div class="name-cell" contenteditable="true" data-table="managers" data-row="${ri}" data-field="name">${r.name}</div><span class="role-tag" contenteditable="true" data-table="managers" data-row="${ri}" data-field="role">${r.role||''}</span></td>
-      ${cells}
-      <td class="small-col editable-txt" contenteditable="true" data-table="managers" data-row="${ri}" data-field="off">${countOff(r.days)}</td>
-      <td class="small-col">${autoHeures(r.days)}</td>
-      <td class="comment-col editable-txt" contenteditable="true" data-table="managers" data-row="${ri}" data-field="comment">${r.comment||''}</td>
-      <td style="white-space:nowrap"><button class="rowcopy" data-table="managers" data-row="${ri}" title="Copier la semaine">📋</button><button class="rowpaste" data-table="managers" data-row="${ri}" title="Coller la semaine copiée">📥</button><button class="rowdel" data-table="managers" data-row="${ri}">✕</button></td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = headerRowHTML('<th>OFF</th><th>Heures</th><th>Commentaires</th><th></th>') + `<tbody>${rows}</tbody>`;
-}
-
-function renderPause(){
-  const el = document.getElementById('table-pause');
-  let rows = data[currentProject].pause.map((r,ri)=>{
-    const color = zoneColor(r.zone);
-    let cells = r.days.map((c,di)=>shiftCellHTML(c,ri,di,'pause',color)).join('');
-    return `<tr>
-      <td><span class="zone-chip" contenteditable="true" data-table="pause" data-row="${ri}" data-field="zone"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
-      <td><div class="name-cell" contenteditable="true" data-table="pause" data-row="${ri}" data-field="name">${r.name}</div></td>
-      ${cells}
-      <td style="white-space:nowrap"><button class="rowcopy" data-table="pause" data-row="${ri}" title="Copier la semaine">📋</button><button class="rowpaste" data-table="pause" data-row="${ri}" title="Coller la semaine copiée">📥</button><button class="rowdel" data-table="pause" data-row="${ri}">✕</button></td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = headerRowHTML('<th></th>') + `<tbody>${rows}</tbody>`;
-}
-
-function renderZones(){
-  const el = document.getElementById('table-zones');
-  let rows = data[currentProject].zones.map((r,ri)=>{
-    const color = zoneColor(r.zone);
-    let cells = r.days.map((c,di)=>shiftCellHTML(c,ri,di,'zones',color)).join('');
-    return `<tr>
-      <td><span class="zone-chip" contenteditable="true" data-table="zones" data-row="${ri}" data-field="zone"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
-      <td><div class="name-cell" contenteditable="true" data-table="zones" data-row="${ri}" data-field="name">${r.name}</div></td>
-      ${cells}
-      <td class="small-col editable-txt" contenteditable="true" data-table="zones" data-row="${ri}" data-field="off">${countOff(r.days)}</td>
-      <td class="small-col">${autoHeures(r.days)}</td>
-      <td class="comment-col editable-txt" contenteditable="true" data-table="zones" data-row="${ri}" data-field="comment">${r.comment||''}</td>
-      <td style="white-space:nowrap"><button class="rowcopy" data-table="zones" data-row="${ri}" title="Copier la semaine">📋</button><button class="rowpaste" data-table="zones" data-row="${ri}" title="Coller la semaine copiée">📥</button><button class="rowdel" data-table="zones" data-row="${ri}">✕</button></td>
-    </tr>`;
-  }).join('');
-  el.innerHTML = headerRowHTML('<th>OFF</th><th>Heures</th><th>Commentaires</th><th></th>') + `<tbody>${rows}</tbody>`;
-}
-
-function renderStats(){
-  const el = document.getElementById('table-stats');
-  const statsObj = data[currentProject].stats;
-  const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
-  let head = `<tr><th>Indicateur</th>${DAYS.map(dn=>`<th>${dn}</th>`).join('')}</tr>`;
-  let body = labels.map(([key,label])=>{
-    let cells = statsObj[key].map((v,di)=>`<td class="editable-txt" contenteditable="true" data-stat="${key}" data-day="${di}">${v}</td>`).join('');
-    return `<tr><td>${label}</td>${cells}</tr>`;
-  }).join('');
-  let offRow = `<tr><td>NB OFF (auto)</td>${DAYS.map((dn,di)=>`<td class="editable-txt">${countOffDay(di)}</td>`).join('')}</tr>`;
-  el.innerHTML = `<thead>${head}</thead><tbody>${body}${offRow}</tbody>`;
-}
-
-function completHeaderHTML(){
-  let ths = DAYS.map((dn,i)=>{
-    const short = dn.charAt(0).toUpperCase()+dn.slice(1);
-    return `<th>${short} — Entrée<div style="font-weight:400;font-size:9px;text-transform:none;color:var(--sub);margin-top:2px">${DATES[i]}</div></th><th>${short} — Sortie</th>`;
-  }).join('');
-  return `<thead><tr><th>Activité</th><th>Zone</th><th>Collaborateur</th>${ths}<th>OFF</th><th>Heures</th><th>Commentaires</th></tr></thead>`;
-}
-
-function completCellHTML(c){
-  if(isWorkLike(c.status)) return `<td class="small-col">${c.start}</td><td class="small-col">${c.end}</td>`;
-  const label = STATUS[c.status].label.toUpperCase();
-  return `<td class="small-col" style="color:var(--rose);font-weight:700">${label}</td><td class="small-col" style="color:var(--rose);font-weight:700">${label}</td>`;
-}
-
-function renderComplet(){
-  const el = document.getElementById('table-complet');
-  let rows = '';
-  PROJECTS.forEach(pk=>{
-    const label = PROJECT_LABELS[pk];
-    const proj = data[pk];
-    ['managers','zones'].forEach(section=>{
-      proj[section].forEach(r=>{
-        const color = zoneColor(r.zone);
-        let cells = r.days.map(c=>completCellHTML(c)).join('');
-        rows += `<tr>
-          <td><span class="activite-chip">${label}</span></td>
-          <td><span class="zone-chip"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
-          <td class="name-cell" style="cursor:default">${r.role?r.role+' ':''}${r.name}</td>
-          ${cells}
-          <td class="small-col">${countOff(r.days)}</td>
-          <td class="small-col">${autoHeures(r.days)}</td>
-          <td class="comment-col">${r.comment||''}</td>
-        </tr>`;
-      });
-    });
-  });
-  el.innerHTML = completHeaderHTML() + `<tbody>${rows}</tbody>`;
-}
-
-function countOff(days){ return days.filter(c=>c.status==='off').length; }
-function countOffDay(di){ return data[currentProject].zones.filter(r=>r.days[di].status==='off').length; }
-function autoHeures(days){
-  let total=0;
-  days.forEach(c=>{
-    if(isWorkLike(c.status) && c.start && c.end){
-      // Déduire 1h de pause déjeuner par journée travaillée
-      total += (timeToMin(c.end)-timeToMin(c.start)) - 60;
-    }
-  });
-  if(total<0) total=0;
-  const h = Math.floor(total/60), m = total%60;
-  return `${h}:${m.toString().padStart(2,'0')}:00`;
-}
-
-function renderAll(){ renderManagers(); renderPause(); renderZones(); renderStats(); renderComplet(); attachEvents(); }
-
-/* ---------------- EVENTS ---------------- */
-function getTable(name){ return data[currentProject][name]; }
-
-function attachEvents(){
-  document.querySelectorAll('.shift-cell').forEach(td=>{
-    td.addEventListener('click', ()=> openPopover(td));
-  });
-  document.querySelectorAll('.rowdel').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const t = btn.dataset.table, idx = +btn.dataset.row;
-      getTable(t).splice(idx,1);
-      renderAll();
-    });
-  });
-  document.querySelectorAll('.rowcopy').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const t = btn.dataset.table, idx = +btn.dataset.row;
-      const row = getTable(t)[idx];
-      weekClipboard = { table: t, days: JSON.parse(JSON.stringify(row.days)) };
-      btn.textContent = '✅';
-      setTimeout(()=>{ btn.textContent = '📋'; }, 900);
-    });
-  });
-  document.querySelectorAll('.rowpaste').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      if(!weekClipboard){ alert('Aucune semaine copiée. Clique d\'abord sur 📋 sur la ligne source.'); return; }
-      const t = btn.dataset.table, idx = +btn.dataset.row;
-      if(weekClipboard.table !== t){
-        if(!confirm('La semaine copiée vient d\'une autre section ('+weekClipboard.table+'). Coller quand même ?')) return;
-      }
-      const row = getTable(t)[idx];
-      row.days = JSON.parse(JSON.stringify(weekClipboard.days));
-      renderAll();
-    });
-  });
-  document.querySelectorAll('[contenteditable][data-field]').forEach(elm=>{
-    elm.addEventListener('blur', ()=>{
-      const t = elm.dataset.table, idx = +elm.dataset.row, field = elm.dataset.field;
-      const row = getTable(t)[idx];
-      let val = elm.innerText.trim();
-      if(field==='zone'){ val = val.replace(/^\s*●?\s*/,''); }
-      row[field] = val;
-      if(field==='zone'||field==='name') renderAll();
-    });
-  });
-  document.querySelectorAll('[data-stat]').forEach(elm=>{
-    elm.addEventListener('blur', ()=>{
-      const key=elm.dataset.stat, di=+elm.dataset.day;
-      data[currentProject].stats[key][di] = parseInt(elm.innerText.trim())||0;
-    });
-  });
-  document.querySelectorAll('.dateedit').forEach(elm=>{
-    elm.addEventListener('blur', ()=>{ DATES[+elm.dataset.day] = elm.innerText.trim(); renderComplet(); });
-  });
-}
-
-/* ---- Popover editor ---- */
-const backdrop = document.getElementById('backdrop');
-const popover = document.getElementById('popover');
-const statusGrid = document.getElementById('statusGrid');
-const timeBlock = document.getElementById('timeBlock');
-const startBtnGrid = document.getElementById('startBtnGrid');
-const endBtnGrid = document.getElementById('endBtnGrid');
-const previewFill = document.getElementById('previewFill');
-let current = null; // {table, row, day}
-let weekClipboard = null; // {table, days:[...]}
-
-/* Boutons horaires fixes pour début / fin */
-const START_OPTIONS = ['7:00','8:00','9:00','10:00','11:00'];
-const END_OPTIONS = ['16:00','17:00','18:00','19:00','20:00'];
-const PAUSE_START_OPTIONS = ['11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00'];
-function addOneHour(t){
-  const [h,m] = t.split(':').map(Number);
-  return (h+1) + ':' + m.toString().padStart(2,'0');
-}
-
-function openPopover(td){
-  const table = td.dataset.table, row = +td.dataset.row, day = +td.dataset.day;
-  current = {table,row,day};
-  const dataRow = getTable(table)[row];
-  const cell = dataRow.days[day];
-  document.getElementById('popTitle').textContent = dataRow.name;
-  document.getElementById('popSub').textContent = DAYS[day] + ' ' + DATES[day];
-
-  statusGrid.innerHTML = Object.keys(STATUS).map(key=>{
-    const active = cell.status===key ? 'active':'';
-    return `<button type="button" class="status-btn st-${key} ${active}" data-status="${key}">${STATUS[key].label}</button>`;
-  }).join('');
-  statusGrid.querySelectorAll('.status-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const newStatus = btn.dataset.status;
-      cell.status = newStatus;
-      const workLike = isWorkLike(newStatus);
-      if(workLike && !cell.start){
-        if(current && current.table==='pause'){ cell.start='12:00'; cell.end='13:00'; }
-        else { cell.start='8:00'; cell.end='17:00'; }
-      }
-      statusGrid.querySelectorAll('.status-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      timeBlock.classList.toggle('show', workLike);
-      if(workLike) renderTimeButtons(cell);
-      refreshCellDisplay();
-    });
-  });
-
-  const isWork = isWorkLike(cell.status);
-  timeBlock.classList.toggle('show', isWork);
-  if(isWork) renderTimeButtons(cell);
-
-  const rect = td.getBoundingClientRect();
-  let top = rect.bottom + 10;
-  let left = rect.left;
-  const maxLeft = window.innerWidth - 306;
-  if(left>maxLeft) left = maxLeft;
-  if(top > window.innerHeight - 380) top = Math.max(20, rect.top - 380);
-  popover.style.top = top+'px';
-  popover.style.left = Math.max(10,left)+'px';
-
-  backdrop.classList.add('show');
-  popover.classList.add('show');
-}
-
-function renderTimeButtons(cell){
-  const isPause = current && current.table === 'pause';
-  const startOpts = isPause ? PAUSE_START_OPTIONS : START_OPTIONS;
-  // In pause, end is derived (start + 1h) — snap now to keep data consistent.
-  if(isPause && cell.start){ cell.end = addOneHour(cell.start); }
-  startBtnGrid.innerHTML = startOpts.map(t=>
-    `<button type="button" class="time-btn ${cell.start===t?'active':''}" data-role="start" data-time="${t}">${t}</button>`
-  ).join('');
-  if(isPause){
-    endBtnGrid.innerHTML = cell.end
-      ? `<button type="button" class="time-btn active" disabled>${cell.end}</button><div style="font-size:11px;color:var(--sub);margin-left:6px;align-self:center">(début + 1h)</div>`
-      : `<div style="font-size:11.5px;color:var(--sub)">Choisir un début</div>`;
-  } else {
-    endBtnGrid.innerHTML = END_OPTIONS.map(t=>
-      `<button type="button" class="time-btn ${cell.end===t?'active':''}" data-role="end" data-time="${t}">${t}</button>`
-    ).join('');
-  }
-
-  startBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      cell.start = btn.dataset.time;
-      if(isPause){ cell.end = addOneHour(cell.start); }
-      startBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      if(isPause){
-        endBtnGrid.innerHTML = `<button type="button" class="time-btn active" disabled>${cell.end}</button><div style="font-size:11px;color:var(--sub);margin-left:6px;align-self:center">(début + 1h)</div>`;
-      }
-      updatePreviewFill(cell);
-      refreshCellDisplay();
-    });
-  });
-  if(!isPause){
-    endBtnGrid.querySelectorAll('.time-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        cell.end = btn.dataset.time;
-        endBtnGrid.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        updatePreviewFill(cell);
-        refreshCellDisplay();
-      });
-    });
-  }
-
-  updatePreviewFill(cell);
-}
-
-function updatePreviewFill(cell){
-  if(!cell.start || !cell.end){ previewFill.style.width='0%'; return; }
-  const sMin = timeToMin(cell.start), eMin = timeToMin(cell.end);
-  const total = DAY_MAX-DAY_MIN;
-  previewFill.style.left = (((sMin-DAY_MIN)/total)*100)+'%';
-  previewFill.style.width = Math.max(((eMin-sMin)/total*100),2)+'%';
-}
-
-function refreshCellDisplay(){
-  if(!current) return;
-  renderAll();
-}
-
-function closePopover(){
-  backdrop.classList.remove('show');
-  popover.classList.remove('show');
-  current = null;
-}
-document.getElementById('popClose').addEventListener('click', closePopover);
-document.getElementById('popApplyWeek').addEventListener('click', ()=>{
-  if(!current) return;
-  const dataRow = getTable(current.table)[current.row];
-  const src = dataRow.days[current.day];
-  const tpl = { status: src.status, start: src.start, end: src.end };
-  for(let i=0;i<7;i++){
-    dataRow.days[i] = { status: tpl.status, start: tpl.start, end: tpl.end };
-  }
-  renderAll();
-  closePopover();
-});
-backdrop.addEventListener('click', closePopover);
-
-/* ---------------- AUTO-DATES FROM WEEK NUMBER ---------------- */
-const MONTHS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-
-function mondayOfISOWeek(week, year){
-  const simple = new Date(year, 0, 1 + (week-1)*7);
-  const dow = simple.getDay() || 7;
-  const monday = new Date(simple);
-  monday.setDate(simple.getDate() - dow + 1);
-  return monday;
-}
-
-function formatDateFR(dateObj){
-  return `${dateObj.getDate()} ${MONTHS_FR[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-}
-
-function updateDatesFromWeek(){
-  const weekTxt = document.getElementById('weekBadge').innerText.trim();
-  const yearTxt = document.getElementById('yearBadge').innerText.trim();
-  const week = parseInt(weekTxt.replace(/\D/g,''));
-  const year = parseInt(yearTxt.replace(/\D/g,''));
-  if(!week || week<1 || week>53 || !year){ return; }
-  const monday = mondayOfISOWeek(week, year);
-  for(let i=0;i<7;i++){
-    const dt = new Date(monday);
-    dt.setDate(monday.getDate()+i);
-    DATES[i] = formatDateFR(dt);
-  }
-  renderAll();
-}
-
-document.getElementById('weekBadge').addEventListener('blur', updateDatesFromWeek);
-document.getElementById('yearBadge').addEventListener('blur', updateDatesFromWeek);
-
-/* ---------------- TABS : projects ---------------- */
-function showView(viewKey){
-  document.querySelectorAll('.tabview').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-'+viewKey).classList.add('active');
-}
-
-document.querySelectorAll('#projTabs .tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('#projTabs .tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    currentProject = tab.dataset.project;
-    const subtabsBar = document.getElementById('subtabsBar');
-    const addBtn = document.getElementById('addRowBtn');
-    if(currentProject==='complet'){
-      subtabsBar.style.display='none';
-      addBtn.disabled = true;
-      showView('complet');
-    } else {
-      subtabsBar.style.display='flex';
-      addBtn.disabled = false;
-      showView(currentSubtab);
-    }
-    renderAll();
-  });
-});
-
-/* ---------------- TABS : sections ---------------- */
-document.querySelectorAll('#subtabsBar .tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('#subtabsBar .tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    currentSubtab = tab.dataset.tab;
-    showView(currentSubtab);
-  });
-});
-
-/* ---------------- ADD ROW ---------------- */
-document.getElementById('addRowBtn').addEventListener('click', ()=>{
-  if(currentProject==='complet') return;
-  const blankDays = () => Array.from({length:7},()=>({status:'off',start:null,end:null}));
-  /* Pour tous les projets sauf Google Leads : entrée/sortie par défaut
-     lundi-jeudi 8:00-18:00, vendredi 8:00-17:00, week-end OFF. */
-  const defaultWorkDays = () => ([
-    {status:'work', start:'8:00', end:'18:00'},
-    {status:'work', start:'8:00', end:'18:00'},
-    {status:'work', start:'8:00', end:'18:00'},
-    {status:'work', start:'8:00', end:'18:00'},
-    {status:'work', start:'8:00', end:'17:00'},
-    {status:'off', start:null, end:null},
-    {status:'off', start:null, end:null}
-  ]);
-  const initDays = () => (currentProject==='googleleads' || currentSubtab==='pause') ? blankDays() : defaultWorkDays();
-  const proj = data[currentProject];
-  if(currentSubtab==='managers') proj.managers.push({zone:'ZONE1', role:'Manager', name:'Nouveau manager', days:initDays(), comment:''});
-  else if(currentSubtab==='pause') proj.pause.push({zone:'ZONE1', name:'Nouveau collaborateur', days:initDays()});
-  else proj.zones.push({zone:'ZONE1', name:'Nouveau collaborateur', days:initDays(), heures:'0:00:00', comment:''});
-  renderAll();
-});
-
-/* ---------------- EXPORT EXCEL ---------------- */
-function fmtHeureExcel(t, offset, formatH){
-  if(!t) return '';
-  let [h, m] = t.split(':').map(Number);
-  h = h + (offset||0);
-  if(formatH){
-    if (m === 0) return `${h}H`;
-    return `${h}H${m.toString().padStart(2, '0')}`;
-  }
-  return `${h}:${m.toString().padStart(2, '0')}`;
-}
-
-async function exportExcel(hourOffset){
-  const offset = hourOffset || 0;
-  const wb = new ExcelJS.Workbook();
-  const weekTxt = document.getElementById('weekBadge').innerText.trim();
-  const yearTxt = document.getElementById('yearBadge').innerText.trim();
-  const weekLabel = weekTxt + ' ' + yearTxt;
-
-  const DAY_COLS_START = 3;
-  const DAY_COLS_END = 2 + 7*2;
-  const EXTRA_START = DAY_COLS_END + 1;
-  const TOTAL_COLS_EXTRA = EXTRA_START + 2;
-  const TOTAL_COLS_NOEXTRA = DAY_COLS_END;
-
-  function buildCombinedSheet(pk){
-    const proj = data[pk];
-    const lbl = PROJECT_LABELS[pk];
-    const ws = wb.addWorksheet(lbl.substring(0,31));
-    let rowCursor = 1;
-
-    function sectionTitle(text, span){
-      ws.mergeCells(rowCursor,1,rowCursor,span);
-      const c = ws.getCell(rowCursor,1);
-      c.value = text;
-      c.font = {bold:true, color:{argb:'FFFFFFFF'}, size:12};
-      c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF152447'}};
-      c.alignment = {horizontal:'center'};
-      rowCursor++;
+    // Si un DEUXIÈME match complet de semaine apparaît avant le premier jour,
+    // c'est le style "en-tête + ligne répétée complète" : on utilise le 2e comme référence.
+    let header = first;
+    if(i+1 < weekMatches.length && weekMatches[i+1].index < dayStart){
+      header = weekMatches[i+1];
+      i++;
     }
 
-    function writeTable(rows, opts){
-      const hasExtra = !!opts.extra;
-      const headRow1 = rowCursor, headRow2 = rowCursor+1;
-      ws.mergeCells(headRow1,1,headRow2,1);
-      ws.mergeCells(headRow1,2,headRow2,2);
-      ws.getCell(headRow1,1).value = 'Zone';
-      ws.getCell(headRow1,2).value = opts.nameLabel;
-      DAYS.forEach((dn,i)=>{
-        const c1 = DAY_COLS_START + i*2;
-        ws.mergeCells(headRow1,c1,headRow1,c1+1);
-        ws.getCell(headRow1,c1).value = (dn.charAt(0).toUpperCase()+dn.slice(1)) + ' ' + DATES[i];
-        ws.getCell(headRow2,c1).value = 'Début';
-        ws.getCell(headRow2,c1+1).value = 'Fin';
+    const weekNumber = header[3];
+    const weekStart = header[2];
+    const weekEnd = header[5];
+
+    // Le nom se trouve entre la fin du 1er match et soit le 2e match complet (style ancien),
+    // soit le début des jours (style tronqué) — dans ce dernier cas on retire le fragment
+    // tronqué "Du ... " qui traîne dans le nom.
+    let namePart = text.substring(first.index+first[0].length, header===first ? dayStart : header.index);
+    namePart = namePart.replace(/Plannings individuels/gi,'').trim();
+    const duFragIdx = namePart.search(/\bDu\s+[A-Za-zà-ÿ]+\s+\d{2}\/\d{2}\/\d{4}/i);
+    if(duFragIdx > -1) namePart = namePart.substring(0, duFragIdx).trim();
+    let name = namePart.replace(/^[:\-]\s*/,'').trim();
+    if(!name){
+      const before = text.substring(0, first.index).replace(/Plannings individuels/gi,'').trim();
+      name = before.split(/(?<=[a-zà-ÿ])(?=[A-ZÀ-Ý])/).pop() || before;
+    }
+
+    const sectionEnd = (i+1<weekMatches.length) ? weekMatches[i+1].index : text.length;
+    const rest = text.substring(header.index+header[0].length, sectionEnd);
+
+    const dayRe = /(lun|mar|mer|jeu|ven|sam|dim)\.\s*(\d{2}\/\d{2}\/\d{4})/g;
+    const dayMatches = [...rest.matchAll(dayRe)];
+    if(dayMatches.length===0){ i++; continue; }
+
+    const totalRe = /(\d{1,3}:\d{2})\s*BC\s*:/i;
+    const days = [];
+    for(let i=0;i<dayMatches.length;i++){
+      const cur = dayMatches[i];
+      const nextIdx = (i+1<dayMatches.length) ? dayMatches[i+1].index : rest.length;
+      let content = rest.substring(cur.index+cur[0].length, nextIdx);
+      const totalMatch = content.match(totalRe);
+      if(totalMatch){ content = content.substring(0, totalMatch.index); }
+
+      const timeRanges = [...content.matchAll(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/g)];
+      let status='inconnu', startFR=null, endFR=null, pauseFR=null;
+      if(timeRanges.length>0){
+        status='travail';
+        const starts = timeRanges.map(r=>timeToMinutes(r[1]));
+        const ends = timeRanges.map(r=>timeToMinutes(r[2]));
+        startFR = minutesToTime(Math.min(...starts));
+        endFR = minutesToTime(Math.max(...ends));
+        if(timeRanges.length>=2){ pauseFR = [timeRanges[0][2], timeRanges[1][1]]; }
+      } else if(/repos/i.test(content)){ status='repos'; }
+        else if(/cong[ée]/i.test(content) || /\bCP\b/.test(content)){ status='conge'; }
+        else if(/f[ée]ri[ée]/i.test(content)){ status='ferie'; }
+        else if(/mission/i.test(content)){ status='mission'; }
+        else if(/presse/i.test(content)){ status='presse'; }
+        else if(/off/i.test(content)){ status='repos'; }
+
+      days.push({
+        dayAbbr: cur[1].toLowerCase(), date: cur[2], status,
+        startFR, endFR, pauseFR,
+        startMA: shiftMinus1h(startFR), endMA: shiftMinus1h(endFR),
+        pauseMA: pauseFR ? [shiftMinus1h(pauseFR[0]), shiftMinus1h(pauseFR[1])] : null
       });
-      if(hasExtra){
-        ws.mergeCells(headRow1,EXTRA_START,headRow2,EXTRA_START);
-        ws.mergeCells(headRow1,EXTRA_START+1,headRow2,EXTRA_START+1);
-        ws.mergeCells(headRow1,EXTRA_START+2,headRow2,EXTRA_START+2);
-        ws.getCell(headRow1,EXTRA_START).value = 'OFF';
-        ws.getCell(headRow1,EXTRA_START+1).value = 'Heures';
-        ws.getCell(headRow1,EXTRA_START+2).value = 'Commentaires';
-      }
-      [ws.getRow(headRow1), ws.getRow(headRow2)].forEach(hr=>{
-        hr.eachCell({includeEmpty:true}, c=>{
-          c.font={bold:true,color:{argb:'FFFFFFFF'}};
-          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}};
-          c.alignment={horizontal:'center',vertical:'middle'};
-          c.border={bottom:{style:'thin'}};
-        });
-      });
-      rowCursor = headRow2 + 1;
-      if(rows.length===0){
-        const row = ws.getRow(rowCursor);
-        row.getCell(1).value = '—';
-        rowCursor++;
-      }
-      rows.forEach(r=>{
-        const row = ws.getRow(rowCursor);
-        row.getCell(1).value = r.zone;
-        row.getCell(2).value = r.role ? `${r.role} ${r.name}`.trim() : r.name;
-        r.days.forEach((c,di)=>{
-          const sCell = row.getCell(DAY_COLS_START + di*2);
-          const eCell = row.getCell(DAY_COLS_START + di*2 + 1);
-          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start, offset, false); eCell.value = fmtHeureExcel(c.end, offset, false); }
-          else { sCell.value = STATUS[c.status].label.toUpperCase(); eCell.value = STATUS[c.status].label.toUpperCase(); }
-          [sCell,eCell].forEach(cell=>{
-            cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[c.status]}};
-            cell.font = {color:{argb: c.status==='off' ? 'FFD9534F' : 'FF1B2130'}, bold: !isWorkLike(c.status)};
-            cell.alignment = {horizontal:'center'};
-          });
-        });
-        if(hasExtra){
-          row.getCell(EXTRA_START).value = countOff(r.days);
-          row.getCell(EXTRA_START+1).value = autoHeures(r.days);
-          row.getCell(EXTRA_START+2).value = r.comment || '';
+    }
+    const totalM = rest.match(/(\d{1,3}:\d{2})\s*BC\s*:\s*(\d{1,3}:\d{2})/i);
+    const totalHours = totalM ? totalM[1] : '';
+
+    if(name && days.length){
+      results.push({ id: name+'_'+weekNumber+'_'+weekStart, name, weekNumber, weekStart, weekEnd, days, totalHours, zone:'', role:'Collaborateur', tt:'', comment:'RAS' });
+    }
+    i++;
+  }
+  return results;
+}
+
+// ---------- Parser for new "Plannings périodiques" table format ----------
+// PDF has a table per Tâche, with 7 day columns and rows per personne.
+// Uses positional items from pdf.js to reconstruct cells (multi-line shifts).
+function parsePeriodicPageFromItems(items, rawText){
+  if(!/Plannings\s+périodiques/i.test(rawText)) return [];
+  if(/R[ée]capitulatif\s+des\s+(absences|repos)/i.test(rawText)) return [];
+
+  const weekMatch = rawText.match(/Du\s+\S+\s+(\d{2}\/\d{2}\/\d{4})\s*\((\d{1,2})\)\s*au\s+\S+\s+(\d{2}\/\d{2}\/\d{4})/i);
+  if(!weekMatch) return [];
+  const weekStart = weekMatch[1], weekNumber = weekMatch[2], weekEnd = weekMatch[3];
+
+  // Try to grab task name; it may be split across items so use rawText.
+  let taskName = '';
+  const taskMatch = rawText.match(/T[âa]che\s*:\s*([^\n]+?)(?=\s{2,}|lun\.|Total|$)/i);
+  if(taskMatch) taskName = taskMatch[1].replace(/\s+/g,' ').trim().slice(0,40);
+
+  const positioned = items
+    .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }))
+    .filter(it => it.str && it.str.trim().length>0);
+
+  // Find items that look like day-column headers (may combine abbr+date in same item, or split).
+  // Detect the header row by scanning for the largest y that has >=5 day tokens on it.
+  // Combine adjacent items on same y first.
+  const byY = {};
+  positioned.forEach(it=>{
+    const yk = Math.round(it.y);
+    (byY[yk] = byY[yk]||[]).push(it);
+  });
+  const yKeys = Object.keys(byY).map(Number).sort((a,b)=>b-a);
+
+  let headerY = null, dayCols = null;
+  for(const yk of yKeys){
+    const row = byY[yk].slice().sort((a,b)=>a.x-b.x);
+    const rowText = row.map(it=>it.str).join(' ');
+    const dayHits = [...rowText.matchAll(/(lun|mar|mer|jeu|ven|sam|dim)\.\s*(\d{2}\/\d{2}\/\d{4})/gi)];
+    if(dayHits.length >= 5){
+      // Locate the x of each day header by finding the item whose str starts the abbr.
+      const cols = [];
+      const seenAbbrs = new Set();
+      for(const it of row){
+        const m = it.str.match(/(lun|mar|mer|jeu|ven|sam|dim)\.?/i);
+        if(m && !seenAbbrs.has(m[1].toLowerCase())){
+          // Find date near this item
+          const combined = row.filter(r=>Math.abs(r.x-it.x)<80 && r.x>=it.x).map(r=>r.str).join(' ');
+          const dm = combined.match(/(\d{2}\/\d{2}\/\d{4})/);
+          if(dm){
+            cols.push({ abbr: m[1].toLowerCase(), date: dm[1], x: it.x });
+            seenAbbrs.add(m[1].toLowerCase());
+          }
         }
-        row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
-        rowCursor++;
-      });
-      rowCursor += 2;
+      }
+      if(cols.length >= 5){
+        headerY = yk;
+        dayCols = cols.sort((a,b)=>a.x-b.x);
+        break;
+      }
+    }
+  }
+  if(!dayCols || dayCols.length < 5) return [];
+
+  // Fill missing days from expected 7-day sequence
+  const orderAbbr = ['lun','mar','mer','jeu','ven','sam','dim'];
+  if(dayCols.length < 7){
+    // Extrapolate x-spacing from existing columns
+    const spans = [];
+    for(let i=1;i<dayCols.length;i++) spans.push((dayCols[i].x-dayCols[i-1].x)/1);
+    const step = spans.reduce((a,b)=>a+b,0)/spans.length;
+    const firstIdx = orderAbbr.indexOf(dayCols[0].abbr);
+    const start = frDateToJs(dayCols[0].date);
+    const rebuilt = [];
+    for(let i=0;i<7;i++){
+      const d = new Date(start); d.setDate(start.getDate() + (i - firstIdx));
+      const existing = dayCols.find(c=>c.abbr===orderAbbr[i]);
+      rebuilt.push(existing || { abbr: orderAbbr[i], date: jsDateToFr(d), x: dayCols[0].x + (i-firstIdx)*step });
+    }
+    dayCols = rebuilt;
+  }
+  dayCols = dayCols.slice(0,7);
+
+  // Total column x = to the right of last day
+  const totalColX = dayCols[6].x + (dayCols[6].x - dayCols[5].x);
+  const colCentersX = dayCols.map(c=>c.x);
+  const nameColMaxX = dayCols[0].x - 8;
+
+  // Group rows below header by y
+  const belowY = yKeys.filter(y=>y < headerY - 2);
+  const rowLabels = belowY.map(y=>{
+    const leftItems = byY[y].filter(it=>it.x < nameColMaxX);
+    const text = leftItems.map(it=>it.str).join(' ').replace(/\s+/g,' ').trim();
+    return { y, text };
+  });
+
+  const persons = [];
+  for(let i=0; i<rowLabels.length; i++){
+    const lbl = rowLabels[i];
+    if(!lbl.text) continue;
+    if(/^Total$/i.test(lbl.text)) continue;
+    if(!/[A-Za-zÀ-ÿ]{2,}/.test(lbl.text)) continue;
+    // Skip page footers / titles that landed in left col
+    if(/Plannings|T[âa]che|Page\s*\d|Timesquare|Holy-Dis|R[ée]capitulatif/i.test(lbl.text)) continue;
+
+    // Find matching Total row
+    let totalIdx = -1;
+    for(let j=i+1; j<rowLabels.length; j++){
+      if(/^Total$/i.test(rowLabels[j].text)){ totalIdx = j; break; }
+      if(rowLabels[j].text && /[A-Za-zÀ-ÿ]{2,}/.test(rowLabels[j].text) &&
+         !/Plannings|T[âa]che|Page\s*\d|Timesquare|Holy-Dis/i.test(rowLabels[j].text)){
+        break;
+      }
+    }
+    if(totalIdx < 0) continue;
+
+    const yTop = lbl.y, yBot = rowLabels[totalIdx].y;
+    const blockItems = [];
+    for(const yk of belowY){
+      if(yk > yBot + 1 && yk <= yTop + 1){
+        for(const it of byY[yk]) blockItems.push(it);
+      }
     }
 
-    function writeStats(){
-      const labels = [['ouverture','NB Ouverture'],['renfort','Renfort presse'],['middle','NB middle'],['middlePlus','NB middle +'],['fermeture','NB Fermeture']];
-      ws.getRow(rowCursor).values = ['Indicateur', ...DAYS];
-      ws.getRow(rowCursor).eachCell(c=>{ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1D3363'}}; });
-      rowCursor++;
-      labels.forEach(([key,label])=>{
-        ws.getRow(rowCursor).values = [label, ...proj.stats[key]];
-        rowCursor++;
-      });
-      ws.getRow(rowCursor).values = ['NB OFF (auto)', ...DAYS.map((dn,di)=>proj.zones.filter(r=>r.days[di].status==='off').length)];
-      rowCursor++;
+    // Assign each item to a day column (or skip if it's in name col or total col)
+    const cells = Array.from({length:7}, ()=>[]);
+    blockItems.forEach(it=>{
+      if(it.x < nameColMaxX) return;
+      let best=-1, bestD=Infinity;
+      for(let c=0;c<7;c++){
+        const d = Math.abs(it.x - colCentersX[c]);
+        if(d<bestD){ bestD=d; best=c; }
+      }
+      const dTotal = Math.abs(it.x - totalColX);
+      if(dTotal < bestD) return; // belongs to total column
+      cells[best].push(it);
+    });
+
+    const days = dayCols.map((dc, idx)=>{
+      cells[idx].sort((a,b)=> b.y - a.y);
+      const cellText = cells[idx].map(it=>it.str).join(' ').replace(/\s+/g,' ').trim();
+      const timeRanges = [...cellText.matchAll(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/g)];
+      let status='inconnu', startFR=null, endFR=null, pauseFR=null;
+      if(timeRanges.length>0){
+        status='travail';
+        const starts = timeRanges.map(r=>timeToMinutes(r[1]));
+        const ends = timeRanges.map(r=>timeToMinutes(r[2]));
+        startFR = minutesToTime(Math.min(...starts));
+        endFR = minutesToTime(Math.max(...ends));
+        if(timeRanges.length>=2){ pauseFR = [timeRanges[0][2], timeRanges[1][1]]; }
+      } else if(/repos/i.test(cellText)) status='repos';
+        else if(/cong[ée]/i.test(cellText) || /\bCP\b/.test(cellText)) status='conge';
+        else if(/f[ée]ri[ée]/i.test(cellText)) status='ferie';
+        else if(/mission/i.test(cellText)) status='mission';
+        else if(/presse/i.test(cellText)) status='presse';
+        else if(/\bHS\b/.test(cellText)) status='repos';
+        else if(!cellText) status='repos';
+      return {
+        dayAbbr: dc.abbr, date: dc.date, status,
+        startFR, endFR, pauseFR,
+        startMA: shiftMinus1h(startFR), endMA: shiftMinus1h(endFR),
+        pauseMA: pauseFR ? [shiftMinus1h(pauseFR[0]), shiftMinus1h(pauseFR[1])] : null
+      };
+    });
+
+    // Weekly total from rightmost item on Total row
+    const totalRowItems = (byY[rowLabels[totalIdx].y]||[]).slice().sort((a,b)=>b.x-a.x);
+    let totalHours='';
+    for(const it of totalRowItems){
+      const m = it.str.match(/(\d{1,3}:\d{2})/);
+      if(m){ totalHours = m[1]; break; }
     }
 
-    sectionTitle('PLANNING ZONES — ' + lbl, TOTAL_COLS_EXTRA);
-    writeTable(proj.zones, {nameLabel:'Collaborateur', extra:true});
+    persons.push({
+      id: lbl.text + '_' + weekNumber + '_' + weekStart + '_' + taskName,
+      name: lbl.text,
+      weekNumber, weekStart, weekEnd,
+      days, totalHours,
+      zone:'', role:'Collaborateur', tt:'',
+      comment: taskName || 'RAS'
+    });
 
-    sectionTitle('PLANNING PAUSE DÉJEUNER', TOTAL_COLS_NOEXTRA);
-    writeTable(proj.pause, {nameLabel:'Collaborateur', extra:false});
-
-    sectionTitle('MANAGERS ET GF', TOTAL_COLS_EXTRA);
-    writeTable(proj.managers, {nameLabel:'Managers et GF', extra:true});
-
-    sectionTitle('SYNTHÈSE JOURNALIÈRE', 8);
-    writeStats();
-
-    ws.getColumn(1).width = 12; ws.getColumn(2).width = 26;
-    for(let i=DAY_COLS_START;i<=DAY_COLS_END;i++) ws.getColumn(i).width = 10;
-    ws.getColumn(EXTRA_START).width = 8; ws.getColumn(EXTRA_START+1).width = 11; ws.getColumn(EXTRA_START+2).width = 24;
+    i = totalIdx;
   }
 
-  PROJECTS.forEach(pk=> buildCombinedSheet(pk));
+  return persons;
+}
 
-  /* ---- Planning complet : tous les champs, colonnes d'identité vides à remplir ---- */
-  const wsC = wb.addWorksheet('Planning complet');
-  const identityHeaders = ['Semaine','Matricule','NOM','PRENOM','NOM COMPLET',"Date d'embauche",'Activité','N° de téléphone','Ville','Point de repère','Zone'];
-  const dayHeaders = DAYS.flatMap(dn=>{
-    const short = dn.charAt(0).toUpperCase()+dn.slice(1,3)+'.';
-    return [short+' Entrée', short+' Sortie'];
+// Merge duplicate person/week entries coming from multiple task pages of the
+// "Plannings périodiques" export: prefer 'travail' days over 'repos' and
+// aggregate task names in the comment column.
+function mergePeople(list){
+  const RANK = { travail:5, mission:4, presse:4, conge:3, ferie:3, repos:2, inconnu:1 };
+  const map = new Map();
+  for(const p of list){
+    const key = p.name + '|' + p.weekStart;
+    if(!map.has(key)){ map.set(key, JSON.parse(JSON.stringify(p))); continue; }
+    const cur = map.get(key);
+    p.days.forEach(d=>{
+      const ex = cur.days.find(x=>x.dayAbbr===d.dayAbbr);
+      if(!ex){ cur.days.push(d); return; }
+      if((RANK[d.status]||0) > (RANK[ex.status]||0)) Object.assign(ex, d);
+    });
+    if(p.comment && p.comment!=='RAS' && !cur.comment.split(/\s*\+\s*/).includes(p.comment)){
+      cur.comment = (cur.comment==='RAS' || !cur.comment) ? p.comment : cur.comment+' + '+p.comment;
+    }
+    // Keep the larger totalHours (usually identical anyway)
+    if(!cur.totalHours && p.totalHours) cur.totalHours = p.totalHours;
+  }
+  return [...map.values()];
+}
+
+// ---------- State ----------
+let loadedFiles = []; // {file, pages:[]}
+let people = []; // parsed records
+
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const fileListEl = document.getElementById('fileList');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const clearBtn = document.getElementById('clearBtn');
+const status1 = document.getElementById('status1');
+const status2 = document.getElementById('status2');
+const reviewCard = document.getElementById('reviewCard');
+const exportCard = document.getElementById('exportCard');
+const peopleBody = document.getElementById('peopleBody');
+
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e=>handleFiles(e.target.files));
+
+function handleFiles(fileList){
+  for(const f of fileList){
+    if(f.type==='application/pdf' || f.name.toLowerCase().endsWith('.pdf')){
+      loadedFiles.push({file:f});
+    }
+  }
+  renderFileList();
+  analyzeBtn.disabled = loadedFiles.length===0;
+}
+
+function renderFileList(){
+  fileListEl.innerHTML='';
+  loadedFiles.forEach((lf, idx)=>{
+    const div = document.createElement('div');
+    div.className='file-chip';
+    div.innerHTML = `<span class="name">📄 ${lf.file.name}</span><span class="meta">${(lf.file.size/1024).toFixed(0)} Ko</span>`;
+    const btn = document.createElement('button');
+    btn.textContent = 'Retirer';
+    btn.onclick = ()=>{ loadedFiles.splice(idx,1); renderFileList(); analyzeBtn.disabled = loadedFiles.length===0; };
+    div.appendChild(btn);
+    fileListEl.appendChild(div);
   });
-  wsC.getRow(1).values = [...identityHeaders, ...dayHeaders, 'OFF','Heures','Commentaires'];
-  wsC.getRow(1).eachCell(c=>{
-    c.font={bold:true,color:{argb:'FFFFFFFF'}};
-    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF152447'}};
-    c.alignment={horizontal:'center',vertical:'middle'};
+}
+
+clearBtn.addEventListener('click', ()=>{
+  loadedFiles=[]; people=[];
+  fileInput.value='';
+  renderFileList();
+  analyzeBtn.disabled=true;
+  reviewCard.style.display='none';
+  exportCard.style.display='none';
+  status1.textContent=''; status1.className='status-line';
+});
+
+analyzeBtn.addEventListener('click', async ()=>{
+  status1.textContent = 'Lecture des PDF en cours…';
+  status1.className='status-line';
+  analyzeBtn.disabled = true;
+  people = [];
+  try{
+    for(const lf of loadedFiles){
+      const buf = await lf.file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+      for(let p=1;p<=pdf.numPages;p++){
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const text = content.items.map(it=>it.str).join(' ');
+        let parsed = [];
+        if(/Plannings\s+périodiques/i.test(text)){
+          parsed = parsePeriodicPageFromItems(content.items, text);
+        }
+        if(!parsed || parsed.length===0){
+          parsed = parsePersonBlocksFromPage(text);
+        }
+        people.push(...parsed);
+      }
+    }
+    // Merge duplicates (same person / same week across multiple task pages)
+    people = mergePeople(people);
+
+    if(people.length===0){
+      status1.textContent = "Aucun planning reconnu dans ces PDF. Vérifie qu'il s'agit bien d'un export Timesquare (Plannings individuels ou Plannings périodiques).";
+      status1.className='status-line error';
+    } else {
+      status1.textContent = `${people.length} planning(s) individuel(s) détecté(s) et converti(s) à l'heure marocaine.`;
+      status1.className='status-line ok';
+      renderPeopleTable();
+      reviewCard.style.display='block';
+      exportCard.style.display='block';
+    }
+  } catch(err){
+    console.error(err);
+    status1.textContent = 'Erreur pendant la lecture des PDF : '+err.message;
+    status1.className='status-line error';
+  }
+  analyzeBtn.disabled = false;
+});
+
+function dayCellHTML(day){
+  if(!day) return '<span class="empty-hint">—</span>';
+  if(day.status==='travail'){
+    return `<div class="day-cell">
+      <div class="fr">${day.startFR}–${day.endFR}</div>
+      <div class="ma">${day.startMA}–${day.endMA}</div>
+    </div>`;
+  }
+  if(day.status==='repos') return '<span class="tag-off">OFF</span>';
+  if(day.status==='conge') return '<span class="tag-conge">Congé</span>';
+  if(day.status==='ferie') return '<span class="tag-ferie">Férié</span>';
+  if(day.status==='mission') return '<span class="tag-mission">Missionnée</span>';
+  if(day.status==='presse') return '<span class="tag-presse">Presse</span>';
+  return '<span class="empty-hint">?</span>';
+}
+
+function renderPeopleTable(){
+  peopleBody.innerHTML='';
+  // group by week for readability
+  const weeks = {};
+  people.forEach(p=>{
+    const key = p.weekNumber+'_'+p.weekStart;
+    (weeks[key] = weeks[key]||[]).push(p);
+  });
+  const weekKeys = Object.keys(weeks).sort((a,b)=>{
+    const da = frDateToJs(weeks[a][0].weekStart), db = frDateToJs(weeks[b][0].weekStart);
+    return da-db;
   });
 
-  const ID_COLS = identityHeaders.length;      // 11
-  const C_DAY_START = ID_COLS + 1;             // 12
-  const C_DAY_END = ID_COLS + 7*2;             // 25
-  const C_OFF = C_DAY_END + 1;
-  const C_HEURES = C_DAY_END + 2;
-  const C_COMMENT = C_DAY_END + 3;
+  weekKeys.forEach(wk=>{
+    const rows = weeks[wk];
+    const headTr = document.createElement('tr');
+    headTr.className='week-head';
+    headTr.innerHTML = `<td colspan="14">Semaine S${rows[0].weekNumber} — du ${rows[0].weekStart} au ${rows[0].weekEnd}</td>`;
+    peopleBody.appendChild(headTr);
 
-  let rIdx = 2;
-  PROJECTS.forEach(pk=>{
-    const proj = data[pk];
-    const lbl = PROJECT_LABELS[pk];
-    ['managers','zones'].forEach(sec=>{
-      proj[sec].forEach(r=>{
-        const row = wsC.getRow(rIdx++);
-        row.getCell(1).value = weekTxt;                                  // Semaine (auto)
-        row.getCell(2).value = '';                                       // Matricule — à remplir
-        row.getCell(3).value = '';                                       // NOM — à remplir
-        row.getCell(4).value = '';                                       // PRENOM — à remplir
-        row.getCell(5).value = (r.role ? r.role+' ' : '') + r.name;      // NOM COMPLET (auto)
-        row.getCell(6).value = '';                                       // Date d'embauche — à remplir
-        row.getCell(7).value = lbl;                                      // Activité (auto)
-        row.getCell(8).value = '';                                       // N° téléphone — à remplir
-        row.getCell(9).value = '';                                       // Ville — à remplir
-        row.getCell(10).value = '';                                      // Point de repère — à remplir
-        row.getCell(11).value = r.zone;                                  // Zone (auto)
-        r.days.forEach((c,di)=>{
-          const sCell = row.getCell(C_DAY_START + di*2);
-          const eCell = row.getCell(C_DAY_START + di*2 + 1);
-          // Planning complet : Congé et Maladie s'affichent comme OFF
-          const displayStatus = (c.status==='conge' || c.status==='maladie') ? 'off' : c.status;
-          if(isWorkLike(c.status)){ sCell.value = fmtHeureExcel(c.start, offset, true); eCell.value = fmtHeureExcel(c.end, offset, true); }
-          else { sCell.value = STATUS[displayStatus].label.toUpperCase(); eCell.value = STATUS[displayStatus].label.toUpperCase(); }
-          [sCell,eCell].forEach(cell=>{
-            cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL_HEX[displayStatus]}};
-            cell.alignment = {horizontal:'center'};
-          });
-        });
-        row.getCell(C_OFF).value = countOff(r.days);
-        row.getCell(C_HEURES).value = autoHeures(r.days);
-        row.getCell(C_COMMENT).value = r.comment || '';
-        row.eachCell({includeEmpty:true}, c=>{ c.border={bottom:{style:'thin',color:{argb:'FFE1E5EE'}},right:{style:'thin',color:{argb:'FFE1E5EE'}}}; });
+    rows.forEach(person=>{
+      const tr = document.createElement('tr');
+      tr.dataset.id = person.id;
+
+      const dayByAbbr = {};
+      person.days.forEach(d=>dayByAbbr[d.dayAbbr]=d);
+
+      tr.innerHTML = `
+        <td>S${person.weekNumber}</td>
+        <td><strong>${person.name}</strong></td>
+        <td><input type="text" class="zone-input" placeholder="ex: ZONE 6" value="${person.zone}"></td>
+        <td>
+          <select class="role-input">
+            <option value="Collaborateur" ${person.role==='Collaborateur'?'selected':''}>Collaborateur</option>
+            <option value="Manager" ${person.role==='Manager'?'selected':''}>Manager</option>
+          </select>
+        </td>
+        ${DAY_ABBR.map(a=>`<td>${dayCellHTML(dayByAbbr[a])}</td>`).join('')}
+        <td>${person.totalHours||'—'}</td>
+        <td><input type="text" class="tt-input" style="width:34px" maxlength="2" value="${person.tt}"></td>
+        <td><input type="text" class="comment-input" value="${person.comment}"></td>
+      `;
+      peopleBody.appendChild(tr);
+
+      tr.querySelector('.zone-input').addEventListener('input', e=>person.zone=e.target.value);
+      tr.querySelector('.role-input').addEventListener('change', e=>{
+        person.role=e.target.value;
+        tr.classList.toggle('role-manager', person.role==='Manager');
       });
+      tr.querySelector('.tt-input').addEventListener('input', e=>person.tt=e.target.value);
+      tr.querySelector('.comment-input').addEventListener('input', e=>person.comment=e.target.value);
+      if(person.role==='Manager') tr.classList.add('role-manager');
     });
   });
-
-  wsC.getColumn(1).width=8; wsC.getColumn(2).width=12; wsC.getColumn(3).width=16; wsC.getColumn(4).width=16;
-  wsC.getColumn(5).width=26; wsC.getColumn(6).width=14; wsC.getColumn(7).width=14; wsC.getColumn(8).width=15;
-  wsC.getColumn(9).width=16; wsC.getColumn(10).width=28; wsC.getColumn(11).width=11;
-  for(let i=C_DAY_START;i<=C_DAY_END;i++) wsC.getColumn(i).width=9;
-  wsC.getColumn(C_OFF).width=7; wsC.getColumn(C_HEURES).width=11; wsC.getColumn(C_COMMENT).width=22;
-
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const suffix = offset ? '_HeureFR' : '_HeureMA';
-  a.href = url; a.download = `Planning_${weekLabel.replace(/\s+/g,'_')}${suffix}.xlsx`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
-document.getElementById('exportBtn').addEventListener('click', ()=>exportExcel(0));
-document.getElementById('exportFrBtn').addEventListener('click', ()=>exportExcel(1));
 
+// ---------- Excel export ----------
+const COLORS = {
+  band: 'FF2E5395',
+  bandText: 'FFFFFFFF',
+  subHeader: 'FF1C3D63',
+  subHeaderText: 'FFFFFFFF',
+  weekendHeader: 'FFEDEFF3',
+  off: 'FFF2DCA6',
+  conge: 'FFD9EAD3',
+  ferie: 'FFD9D9D9',
+  managerTag: 'FFA9D18E',
+  zebra: 'FFF7F8FA',
+  border: 'FFB9C1CE',
+  pauseTime: 'FFDCE6F5',
+  missionPresse: 'FFFFF200',
+  trsptKo: 'FFED9B33'
+};
+function thinBorder(){
+  return { top:{style:'thin',color:{argb:COLORS.border}}, left:{style:'thin',color:{argb:COLORS.border}},
+           bottom:{style:'thin',color:{argb:COLORS.border}}, right:{style:'thin',color:{argb:COLORS.border}} };
+}
+function fill(argb){ return { type:'pattern', pattern:'solid', fgColor:{argb} }; }
 
-/* ---------------- INIT ---------------- */
-renderAll();
+function mostFrequent(arr){
+  if(arr.length===0) return null;
+  const counts = {};
+  arr.forEach(v=>{ const k=JSON.stringify(v); counts[k]=(counts[k]||0)+1; });
+  let best=null,bestCount=-1;
+  Object.keys(counts).forEach(k=>{ if(counts[k]>bestCount){bestCount=counts[k]; best=JSON.parse(k);} });
+  return best;
+}
+
+async function buildWorkbook(){
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Convertisseur Planning FR-MA';
+  const ws = wb.addWorksheet('Plannings (heure Maroc)');
+
+  ws.getColumn(1).width = 11;  // role tag
+  ws.getColumn(2).width = 10;  // zone
+  ws.getColumn(3).width = 22;  // nom
+  for(let c=4;c<=17;c++) ws.getColumn(c).width = 9.5; // 7 days x2
+  ws.getColumn(18).width = 7;   // OFF count
+  ws.getColumn(19).width = 13;  // NB heures
+  ws.getColumn(20).width = 6;   // TT
+  ws.getColumn(21).width = 16;  // Commentaires
+
+  const weeks = {};
+  people.forEach(p=>{
+    const key = p.weekNumber+'_'+p.weekStart;
+    (weeks[key]=weeks[key]||[]).push(p);
+  });
+  const weekKeys = Object.keys(weeks).sort((a,b)=>{
+    const da=frDateToJs(weeks[a][0].weekStart), db=frDateToJs(weeks[b][0].weekStart);
+    return da-db;
+  });
+
+  let row = 1;
+
+  function writeGroupTable(members, roleLabel, weekInfo){
+    if(members.length===0) return;
+    const startRow = row;
+    // Row 1: band
+    ws.mergeCells(startRow,2,startRow,3);
+    const bandLabelCell = ws.getCell(startRow,2);
+    bandLabelCell.value = 'S'+weekInfo.weekNumber;
+    bandLabelCell.font = {bold:true, color:{argb:COLORS.bandText}, size:12};
+    bandLabelCell.fill = fill(COLORS.band);
+    bandLabelCell.alignment = {vertical:'middle', horizontal:'center'};
+
+    const refDays = weekInfo.refDays; // array of 7 {dayAbbr,date}
+    for(let d=0; d<7; d++){
+      const col = 4 + d*2;
+      ws.mergeCells(startRow, col, startRow, col+1);
+      const cell = ws.getCell(startRow, col);
+      const info = refDays[d];
+      cell.value = info ? (DAY_FULL[info.dayAbbr]+' '+info.date) : DAY_FULL[DAY_ABBR[d]];
+      cell.alignment = {vertical:'middle', horizontal:'center'};
+      cell.font = {bold:true, color:{argb: d<5?COLORS.bandText:'FF1B2430'}, size:10.5};
+      cell.fill = fill(d<5?COLORS.band:COLORS.weekendHeader);
+    }
+    ws.mergeCells(startRow,18,startRow+1,18);
+    ws.mergeCells(startRow,19,startRow+1,19);
+    ws.mergeCells(startRow,20,startRow+1,20);
+    ws.mergeCells(startRow,21,startRow+1,21);
+    ['OFF','NB heures','TT','Commentaires'].forEach((label, i)=>{
+      const cell = ws.getCell(startRow, 18+i);
+      cell.value = label;
+      cell.font = {bold:true, color:{argb:COLORS.bandText}, size:10};
+      cell.fill = fill(COLORS.subHeader);
+      cell.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
+    });
+
+    // Row 2: sub-header
+    const subRow = startRow+1;
+    ws.getCell(subRow,2).value = 'Zones';
+    ws.getCell(subRow,3).value = roleLabel;
+    [2,3].forEach(c=>{
+      const cell = ws.getCell(subRow,c);
+      cell.font = {bold:true, color:{argb:COLORS.subHeaderText}, size:10.5};
+      cell.fill = fill(COLORS.subHeader);
+      cell.alignment = {vertical:'middle', horizontal:'center'};
+    });
+    for(let d=0; d<7; d++){
+      const col = 4+d*2;
+      ws.getCell(subRow,col).value = 'Début de shift';
+      ws.getCell(subRow,col+1).value = 'Fin de shift';
+      [col,col+1].forEach(c=>{
+        const cell = ws.getCell(subRow,c);
+        cell.font = {bold:true, color:{argb:d<5?COLORS.subHeaderText:'FF1B2430'}, size:9};
+        cell.fill = fill(d<5?COLORS.subHeader:COLORS.weekendHeader);
+        cell.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
+      });
+    }
+    for(let c=1;c<=21;c++){ ws.getCell(startRow,c).border = thinBorder(); ws.getCell(subRow,c).border = thinBorder(); }
+
+    row = subRow+1;
+
+    // Data rows
+    members.forEach((person, idx)=>{
+      const r = row;
+      const byAbbr = {};
+      person.days.forEach(d=>byAbbr[d.dayAbbr]=d);
+
+      const roleCell = ws.getCell(r,1);
+      if(person.role==='Manager'){
+        roleCell.value = 'Manager';
+        roleCell.fill = fill(COLORS.managerTag);
+        roleCell.font = {bold:true, size:9.5};
+        roleCell.alignment = {vertical:'middle', horizontal:'center'};
+      }
+
+      ws.getCell(r,2).value = person.zone || '';
+      ws.getCell(r,3).value = person.name;
+      ws.getCell(r,3).font = {bold:true, size:10};
+
+      let offCount = 0;
+      for(let d=0; d<7; d++){
+        const col = 4+d*2;
+        const day = byAbbr[DAY_ABBR[d]];
+        const c1 = ws.getCell(r,col), c2 = ws.getCell(r,col+1);
+        if(!day){
+          c1.value=''; c2.value='';
+        } else if(day.status==='travail'){
+          c1.value = day.startMA; c2.value = day.endMA;
+        } else if(day.status==='repos'){
+          c1.value='OFF'; c2.value='OFF';
+          c1.fill=fill(COLORS.off); c2.fill=fill(COLORS.off);
+          offCount++;
+        } else if(day.status==='conge'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value='Congé'; c1.fill=fill(COLORS.conge); c1.alignment={horizontal:'center'};
+        } else if(day.status==='ferie'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value='Férié Français'; c1.fill=fill(COLORS.ferie); c1.alignment={horizontal:'center'};
+        }
+        c1.font = {size:10}; c2.font = {size:10};
+      }
+
+      ws.getCell(r,18).value = offCount;
+      ws.getCell(r,18).alignment = {horizontal:'center'};
+      ws.getCell(r,19).value = person.totalHours ? person.totalHours+':00' : '';
+      ws.getCell(r,19).alignment = {horizontal:'center'};
+      ws.getCell(r,20).value = person.tt || '';
+      ws.getCell(r,20).alignment = {horizontal:'center'};
+      ws.getCell(r,21).value = person.comment || '';
+
+      if(idx % 2 === 1){
+        for(let c=1;c<=21;c++){
+          const cell = ws.getCell(r,c);
+          if(!cell.fill || cell.fill.fgColor === undefined) cell.fill = fill(COLORS.zebra);
+        }
+      }
+      for(let c=1;c<=21;c++){ ws.getCell(r,c).border = thinBorder(); }
+      row++;
+    });
+
+    row += 1; // spacer
+    return startRow;
+  }
+
+  weekKeys.forEach(wk=>{
+    const members = weeks[wk];
+    const refPerson = members.slice().sort((a,b)=>b.days.length-a.days.length)[0];
+    const weekInfo = { weekNumber: refPerson.weekNumber, refDays: refPerson.days };
+
+    const collabs = members.filter(m=>m.role!=='Manager');
+    const managers = members.filter(m=>m.role==='Manager');
+
+    writeGroupTable(collabs, 'Collaborateur', weekInfo);
+
+    // Shift / Pause déjeuner reference block, derived from the group's own converted times
+    const shiftStarts = [], shiftEnds = [], pauses = [];
+    collabs.concat(managers).forEach(p=>p.days.forEach(d=>{
+      if(d.status==='travail'){ shiftStarts.push(d.startMA); shiftEnds.push(d.endMA); }
+      if(d.pauseMA) pauses.push(d.pauseMA);
+    }));
+    const commonStart = mostFrequent(shiftStarts);
+    const commonEnd = mostFrequent(shiftEnds);
+    const commonPause = mostFrequent(pauses);
+
+    if(commonStart || commonPause){
+      const r1 = row, r2 = row+1;
+      ws.mergeCells(r1,2,r1,3); ws.mergeCells(r1,4,r1,5);
+      ws.getCell(r1,2).value='Shift'; ws.getCell(r1,4).value='Pause déjeuner';
+      [2,4].forEach(c=>{
+        const cell = ws.getCell(r1,c);
+        cell.font={bold:true,color:{argb:COLORS.subHeaderText}}; cell.fill=fill(COLORS.subHeader);
+        cell.alignment={horizontal:'center'};
+      });
+      ws.getCell(r2,2).value = commonStart||'';
+      ws.getCell(r2,3).value = commonEnd||'';
+      ws.getCell(r2,4).value = commonPause? commonPause[0]:'';
+      ws.getCell(r2,5).value = commonPause? commonPause[1]:'';
+      [2,3,4,5].forEach(c=>{ ws.getCell(r2,c).alignment={horizontal:'center'}; ws.getCell(r2,c).font={size:10}; });
+      for(let c=1;c<=5;c++){ ws.getCell(r1,c).border=thinBorder(); ws.getCell(r2,c).border=thinBorder(); }
+      row = r2+2;
+    }
+
+    writeGroupTable(managers, 'Manager', weekInfo);
+  });
+
+  ws.views = [{state:'frozen', ySplit:0}];
+
+  buildPauseSheet(wb, weeks, weekKeys);
+
+  return wb;
+}
+
+// ---------- Feuille "Planning pause déjeuner" ----------
+function pauseStatusForDay(day){
+  if(!day) return {type:'none'};
+  if(day.status==='travail'){
+    if(day.pauseMA) return {type:'time', start:day.pauseMA[0], end:day.pauseMA[1]};
+    return {type:'none'};
+  }
+  if(day.status==='repos') return {type:'off'};
+  if(day.status==='conge') return {type:'conge'};
+  if(day.status==='ferie') return {type:'ferie'};
+  if(day.status==='mission') return {type:'mission'};
+  if(day.status==='presse') return {type:'presse'};
+  return {type:'none'};
+}
+
+function buildPauseSheet(wb, weeks, weekKeys){
+  const ws = wb.addWorksheet('Planning pause déjeuner');
+
+  ws.getColumn(1).width = 11;  // Zones
+  ws.getColumn(2).width = 24;  // Collaborateur
+  for(let c=3;c<=16;c++) ws.getColumn(c).width = 8.5; // 7 jours x 2 (D P / FP)
+
+  let row = 1;
+
+  weekKeys.forEach(wk=>{
+    const members = weeks[wk];
+    const refPerson = members.slice().sort((a,b)=>b.days.length-a.days.length)[0];
+    const refDays = refPerson.days;
+
+    // Bandeau titre
+    const titleRow = row;
+    ws.mergeCells(titleRow,1,titleRow,16);
+    const titleCell = ws.getCell(titleRow,1);
+    titleCell.value = 'Planning pause déjeuner';
+    titleCell.font = {bold:true, color:{argb:COLORS.bandText}, size:12};
+    titleCell.fill = fill(COLORS.band);
+    titleCell.alignment = {vertical:'middle', horizontal:'left', indent:1};
+
+    // Ligne "Zones" / "Collaborateur" + jours (fusion verticale sur 2 lignes pour les 2 premières colonnes)
+    const headRow = titleRow+1, subRow = titleRow+2;
+    ws.mergeCells(headRow,1,subRow,1);
+    ws.mergeCells(headRow,2,subRow,2);
+    ws.getCell(headRow,1).value = 'Zones';
+    ws.getCell(headRow,2).value = 'Collaborateur';
+    [1,2].forEach(c=>{
+      const cell = ws.getCell(headRow,c);
+      cell.font = {bold:true, color:{argb:COLORS.bandText}, size:10.5};
+      cell.fill = fill(COLORS.subHeader);
+      cell.alignment = {vertical:'middle', horizontal:'center'};
+    });
+
+    for(let d=0; d<7; d++){
+      const col = 3 + d*2;
+      ws.mergeCells(headRow, col, headRow, col+1);
+      const info = refDays[d];
+      const headCell = ws.getCell(headRow, col);
+      headCell.value = info ? (DAY_FULL[info.dayAbbr]+' '+info.date) : DAY_FULL[DAY_ABBR[d]];
+      headCell.font = {bold:true, color:{argb:COLORS.bandText}, size:10};
+      headCell.fill = fill(COLORS.band);
+      headCell.alignment = {vertical:'middle', horizontal:'center'};
+
+      ws.getCell(subRow,col).value = 'D P';
+      ws.getCell(subRow,col+1).value = 'FP';
+      [col,col+1].forEach(c=>{
+        const cell = ws.getCell(subRow,c);
+        cell.font = {bold:true, color:{argb:COLORS.bandText}, size:9.5};
+        cell.fill = fill(COLORS.subHeader);
+        cell.alignment = {vertical:'middle', horizontal:'center'};
+      });
+    }
+    for(let c=1;c<=16;c++){
+      ws.getCell(headRow,c).border = thinBorder();
+      ws.getCell(subRow,c).border = thinBorder();
+    }
+    ws.autoFilter = { from:{row:headRow, column:1}, to:{row:headRow, column:16} };
+
+    row = subRow+1;
+
+    members.forEach(person=>{
+      const r = row;
+      const byAbbr = {};
+      person.days.forEach(d=>byAbbr[d.dayAbbr]=d);
+
+      const zoneCell = ws.getCell(r,1);
+      zoneCell.value = person.zone || '';
+      zoneCell.alignment = {vertical:'middle', horizontal:'center'};
+      zoneCell.font = {bold:true, size:9.5, color:{argb: (person.zone||'').toUpperCase()==='TRSPT KO' ? 'FFFFFFFF' : 'FFFFFFFF'}};
+      zoneCell.fill = fill((person.zone||'').toUpperCase()==='TRSPT KO' ? COLORS.trsptKo : COLORS.subHeader);
+
+      const nameCell = ws.getCell(r,2);
+      nameCell.value = person.name;
+      nameCell.font = {bold:true, size:10, color:{argb:'FFFFFFFF'}};
+      nameCell.fill = fill(COLORS.subHeader);
+      nameCell.alignment = {vertical:'middle', horizontal:'left', indent:1};
+
+      for(let d=0; d<7; d++){
+        const col = 3 + d*2;
+        const day = byAbbr[DAY_ABBR[d]];
+        const info = pauseStatusForDay(day);
+        const c1 = ws.getCell(r,col), c2 = ws.getCell(r,col+1);
+
+        if(info.type==='time'){
+          c1.value = info.start; c2.value = info.end;
+          c1.fill = fill(COLORS.pauseTime); c2.fill = fill(COLORS.pauseTime);
+          c1.font = {size:10}; c2.font = {size:10};
+        } else if(info.type==='off'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'OFF'; c1.fill = fill(COLORS.off);
+          c1.font = {size:10, color:{argb:'FF8A5A00'}};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='conge'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Congé'; c1.fill = fill(COLORS.conge);
+          c1.font = {size:10, bold:true, color:{argb:'FF2F6E44'}};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='ferie'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Férié'; c1.fill = fill(COLORS.ferie);
+          c1.font = {size:10};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='mission'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Missionnée'; c1.fill = fill(COLORS.missionPresse);
+          c1.font = {size:10, bold:true};
+          c1.alignment = {horizontal:'center'};
+        } else if(info.type==='presse'){
+          ws.mergeCells(r,col,r,col+1);
+          c1.value = 'Presse'; c1.fill = fill(COLORS.missionPresse);
+          c1.font = {size:10, bold:true};
+          c1.alignment = {horizontal:'center'};
+        } else {
+          c1.value=''; c2.value='';
+        }
+      }
+      for(let c=1;c<=16;c++){ ws.getCell(r,c).border = thinBorder(); }
+      row++;
+    });
+
+    row += 2; // espace avant la semaine suivante
+  });
+
+  ws.views = [{state:'frozen', xSplit:2, ySplit:3}];
+}
+
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
+  status2.textContent = 'Génération du fichier Excel…';
+  status2.className='status-line';
+  try{
+    const wb = await buildWorkbook();
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Planning_Maroc_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    status2.textContent = 'Fichier Excel généré et téléchargé ✓';
+    status2.className='status-line ok';
+  } catch(err){
+    console.error(err);
+    status2.textContent = 'Erreur pendant la génération : '+err.message;
+    status2.className='status-line error';
+  }
+});
 </script>
 </body>
 </html>
