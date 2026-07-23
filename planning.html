@@ -30,6 +30,8 @@
   --sky-soft:#E1EEF7;
   --violet:#6C4FA8;
   --violet-soft:#EBE5F7;
+  --renfort:#A8654C;
+  --renfort-soft:#F2E4DE;
   --radius:10px;
   --shadow:0 8px 24px rgba(21,36,71,.10);
 }
@@ -288,6 +290,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .status-presse{background:var(--gold-soft);}
 .status-maladie{background:var(--sky-soft);}
 .status-teletravail{background:var(--violet-soft);}
+.status-renfort{background:var(--renfort-soft);}
+.status-renfort .status-text{color:var(--renfort);}
 
 .editable-txt{
   outline:none;
@@ -311,6 +315,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
   border-radius:6px;
 }
 .rowdel:hover{color:var(--rose);background:var(--rose-soft);}
+.rowcopy,.rowpaste{border:none;background:transparent;cursor:pointer;font-size:14px;line-height:1;padding:2px 5px;border-radius:6px;margin-right:2px;}
+.rowcopy:hover,.rowpaste:hover{background:#EEF1F8;}
 
 .stat-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:0;}
 .stat-table td, .stat-table th{border:1px solid var(--line);padding:7px 10px;}
@@ -380,11 +386,31 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 .status-btn.st-presse.active{background:var(--gold-soft);}
 .status-btn.st-teletravail{color:var(--violet);}
 .status-btn.st-teletravail.active{background:var(--violet-soft);}
+.status-btn.st-renfort{color:var(--renfort);}
+.status-btn.st-renfort.active{background:var(--renfort-soft);}
 .status-btn.st-maladie{color:var(--sky);}
 .status-btn.st-maladie.active{background:var(--sky-soft);}
 
 .time-block{display:none;}
 .time-block.show{display:block;}
+.renfort-block{display:none;margin-bottom:12px;}
+.renfort-block.show{display:block;}
+.renfort-block label{
+  display:block;
+  font-size:11.5px;font-weight:600;color:var(--sub);
+  margin-bottom:5px;
+}
+.renfort-block input{
+  width:100%;
+  border:1.5px solid var(--line);
+  border-radius:8px;
+  padding:8px 10px;
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  color:var(--ink);
+  outline:none;
+}
+.renfort-block input:focus{border-color:var(--renfort);}
 .time-row{margin-bottom:12px;}
 .time-row label{
   display:flex;justify-content:space-between;
@@ -431,12 +457,9 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
 <div class="appbar">
   <h1>📋 Planning <span class="week-badge" id="weekBadge" contenteditable="true">S28</span> <span class="week-badge" id="yearBadge" contenteditable="true" style="margin-left:-6px">2026</span></h1>
   <button class="btn btn-ghost" id="addRowBtn">＋ Ajouter une ligne</button>
-  <button class="btn btn-ghost" id="importBtn">⬆ Importer un planning</button>
-  <input type="file" id="importFile" accept=".xlsx" style="display:none">
   <button class="btn btn-primary" id="exportBtn">⬇ Exporter (heure MA)</button>
   <button class="btn btn-primary" id="exportFrBtn">⬇ Exporter (heure FR)</button>
   <div class="sub">Clique sur une case pour la modifier — tout est enregistré automatiquement à l'écran · build multi-activités-v1</div>
-
 </div>
 
 <div class="tabs proj-tabs" id="projTabs">
@@ -512,6 +535,10 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
   <h3 id="popTitle">Modifier</h3>
   <div class="pop-sub" id="popSub"></div>
   <div class="status-grid" id="statusGrid"></div>
+  <div class="renfort-block" id="renfortBlock">
+    <label>Nom du statut (renfort)</label>
+    <input type="text" id="renfortInput" placeholder="Ex : Renfort caisse, Renfort samedi…">
+  </div>
   <div class="time-block" id="timeBlock">
     <div class="preview-track"><div class="preview-fill" id="previewFill"></div></div>
     <div class="time-row">
@@ -523,7 +550,8 @@ table.plan tbody tr:nth-child(even):hover{background:#F7F9FF;}
       <div class="time-btn-grid" id="endBtnGrid"></div>
     </div>
   </div>
-  <div class="pop-actions">
+  <div class="pop-actions" style="flex-wrap:wrap;gap:8px">
+    <button class="btn btn-ghost" style="color:#fff;background:var(--navy)" id="popApplyWeek" title="Copier ce jour sur toute la semaine de ce collaborateur">📅 Appliquer à toute la semaine</button>
     <button class="btn btn-ghost" style="color:var(--navy);background:#EEF1F8" id="popClose">Fermer</button>
   </div>
 </div>
@@ -539,16 +567,17 @@ const DATES = ['06 juillet 2026','07 juillet 2026','08 juillet 2026','09 juillet
 const STATUS = {
   work:   {label:'Travail',     cls:''},
   teletravail:{label:'Télétravail', cls:'status-teletravail'},
+  renfort:{label:'Renfort',     cls:'status-renfort'},
   off:    {label:'OFF',         cls:'status-off'},
   conge:  {label:'Congé',       cls:'status-conge'},
   maladie:{label:'Maladie',     cls:'status-maladie'},
   mission:{label:'Missionnée',  cls:'status-mission'},
   presse: {label:'Presse',      cls:'status-presse'}
 };
-const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', off:'#D9534F', conge:'#3F8F5E', maladie:'#2F7FB5', mission:'#DB8A2A', presse:'#C9A227'};
-const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', off:'FFFBE7E6', conge:'FFE4F3E8', maladie:'FFE1EEF7', mission:'FFFCEBD6', presse:'FFFAF1CE'};
+const STATUS_COLOR = {work:'#1F7A6C', teletravail:'#6C4FA8', renfort:'#A8654C', off:'#D9534F', conge:'#3F8F5E', maladie:'#2F7FB5', mission:'#DB8A2A', presse:'#C9A227'};
+const STATUS_FILL_HEX = {work:'FFE4F2EF', teletravail:'FFEBE5F7', renfort:'FFF2E4DE', off:'FFFBE7E6', conge:'FFE4F3E8', maladie:'FFE1EEF7', mission:'FFFCEBD6', presse:'FFFAF1CE'};
 /* Statuts qui affichent un horaire (début–fin) au lieu d'un simple libellé */
-function isWorkLike(status){ return status==='work' || status==='teletravail' || status==='mission'; }
+function isWorkLike(status){ return status==='work' || status==='teletravail' || status==='renfort' || status==='mission'; }
 
 function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
 function minToTime(m){ const h=Math.floor(m/60).toString().padStart(2,'0'); const mm=(m%60).toString().padStart(2,'0'); return h+':'+mm; }
@@ -982,8 +1011,11 @@ function barFillStyle(cellData, colorHex){
 
 function shiftCellHTML(cellData, rowIdx, dayIdx, tableName, colorHex){
   const st = STATUS[cellData.status];
+  const renfortTag = (cellData.status==='renfort' && cellData.renfortLabel)
+    ? `<div class="status-text" style="margin-bottom:2px">${cellData.renfortLabel}</div>`
+    : '';
   const inner = isWorkLike(cellData.status)
-    ? `<div class="time-text">${cellData.start}–${cellData.end}</div>`
+    ? `${renfortTag}<div class="time-text">${cellData.start}–${cellData.end}</div>`
     : `<div class="status-text">${st.label}</div>`;
   const bar = isWorkLike(cellData.status)
     ? `<div class="bar-track"><div class="bar-fill" style="${barFillStyle(cellData,colorHex)}"></div></div>`
@@ -1008,7 +1040,7 @@ function renderManagers(){
       <td class="small-col editable-txt" contenteditable="true" data-table="managers" data-row="${ri}" data-field="off">${countOff(r.days)}</td>
       <td class="small-col">${autoHeures(r.days)}</td>
       <td class="comment-col editable-txt" contenteditable="true" data-table="managers" data-row="${ri}" data-field="comment">${r.comment||''}</td>
-      <td><button class="rowdel" data-table="managers" data-row="${ri}">✕</button></td>
+      <td style="white-space:nowrap"><button class="rowcopy" data-table="managers" data-row="${ri}" title="Copier la semaine">📋</button><button class="rowpaste" data-table="managers" data-row="${ri}" title="Coller la semaine copiée">📥</button><button class="rowdel" data-table="managers" data-row="${ri}">✕</button></td>
     </tr>`;
   }).join('');
   el.innerHTML = headerRowHTML('<th>OFF</th><th>Heures</th><th>Commentaires</th><th></th>') + `<tbody>${rows}</tbody>`;
@@ -1023,7 +1055,7 @@ function renderPause(){
       <td><span class="zone-chip" contenteditable="true" data-table="pause" data-row="${ri}" data-field="zone"><span class="zone-dot" style="background:${color}"></span>${r.zone}</span></td>
       <td><div class="name-cell" contenteditable="true" data-table="pause" data-row="${ri}" data-field="name">${r.name}</div></td>
       ${cells}
-      <td><button class="rowdel" data-table="pause" data-row="${ri}">✕</button></td>
+      <td style="white-space:nowrap"><button class="rowcopy" data-table="pause" data-row="${ri}" title="Copier la semaine">📋</button><button class="rowpaste" data-table="pause" data-row="${ri}" title="Coller la semaine copiée">📥</button><button class="rowdel" data-table="pause" data-row="${ri}">✕</button></td>
     </tr>`;
   }).join('');
   el.innerHTML = headerRowHTML('<th></th>') + `<tbody>${rows}</tbody>`;
@@ -1041,7 +1073,7 @@ function renderZones(){
       <td class="small-col editable-txt" contenteditable="true" data-table="zones" data-row="${ri}" data-field="off">${countOff(r.days)}</td>
       <td class="small-col">${autoHeures(r.days)}</td>
       <td class="comment-col editable-txt" contenteditable="true" data-table="zones" data-row="${ri}" data-field="comment">${r.comment||''}</td>
-      <td><button class="rowdel" data-table="zones" data-row="${ri}">✕</button></td>
+      <td style="white-space:nowrap"><button class="rowcopy" data-table="zones" data-row="${ri}" title="Copier la semaine">📋</button><button class="rowpaste" data-table="zones" data-row="${ri}" title="Coller la semaine copiée">📥</button><button class="rowdel" data-table="zones" data-row="${ri}">✕</button></td>
     </tr>`;
   }).join('');
   el.innerHTML = headerRowHTML('<th>OFF</th><th>Heures</th><th>Commentaires</th><th></th>') + `<tbody>${rows}</tbody>`;
@@ -1130,6 +1162,27 @@ function attachEvents(){
       renderAll();
     });
   });
+  document.querySelectorAll('.rowcopy').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = btn.dataset.table, idx = +btn.dataset.row;
+      const row = getTable(t)[idx];
+      weekClipboard = { table: t, days: JSON.parse(JSON.stringify(row.days)) };
+      btn.textContent = '✅';
+      setTimeout(()=>{ btn.textContent = '📋'; }, 900);
+    });
+  });
+  document.querySelectorAll('.rowpaste').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(!weekClipboard){ alert('Aucune semaine copiée. Clique d\'abord sur 📋 sur la ligne source.'); return; }
+      const t = btn.dataset.table, idx = +btn.dataset.row;
+      if(weekClipboard.table !== t){
+        if(!confirm('La semaine copiée vient d\'une autre section ('+weekClipboard.table+'). Coller quand même ?')) return;
+      }
+      const row = getTable(t)[idx];
+      row.days = JSON.parse(JSON.stringify(weekClipboard.days));
+      renderAll();
+    });
+  });
   document.querySelectorAll('[contenteditable][data-field]').forEach(elm=>{
     elm.addEventListener('blur', ()=>{
       const t = elm.dataset.table, idx = +elm.dataset.row, field = elm.dataset.field;
@@ -1155,11 +1208,21 @@ function attachEvents(){
 const backdrop = document.getElementById('backdrop');
 const popover = document.getElementById('popover');
 const statusGrid = document.getElementById('statusGrid');
+const renfortBlock = document.getElementById('renfortBlock');
+const renfortInput = document.getElementById('renfortInput');
 const timeBlock = document.getElementById('timeBlock');
+renfortInput.addEventListener('input', ()=>{
+  if(!current) return;
+  const dataRow = getTable(current.table)[current.row];
+  const cell = dataRow.days[current.day];
+  cell.renfortLabel = renfortInput.value;
+  refreshCellDisplay();
+});
 const startBtnGrid = document.getElementById('startBtnGrid');
 const endBtnGrid = document.getElementById('endBtnGrid');
 const previewFill = document.getElementById('previewFill');
 let current = null; // {table, row, day}
+let weekClipboard = null; // {table, days:[...]}
 
 /* Boutons horaires fixes pour début / fin */
 const START_OPTIONS = ['7:00','8:00','9:00','10:00','11:00'];
@@ -1195,6 +1258,8 @@ function openPopover(td){
       btn.classList.add('active');
       timeBlock.classList.toggle('show', workLike);
       if(workLike) renderTimeButtons(cell);
+      renfortBlock.classList.toggle('show', newStatus==='renfort');
+      if(newStatus==='renfort') renfortInput.value = cell.renfortLabel || '';
       refreshCellDisplay();
     });
   });
@@ -1202,6 +1267,8 @@ function openPopover(td){
   const isWork = isWorkLike(cell.status);
   timeBlock.classList.toggle('show', isWork);
   if(isWork) renderTimeButtons(cell);
+  renfortBlock.classList.toggle('show', cell.status==='renfort');
+  renfortInput.value = cell.renfortLabel || '';
 
   const rect = td.getBoundingClientRect();
   let top = rect.bottom + 10;
@@ -1281,6 +1348,17 @@ function closePopover(){
   current = null;
 }
 document.getElementById('popClose').addEventListener('click', closePopover);
+document.getElementById('popApplyWeek').addEventListener('click', ()=>{
+  if(!current) return;
+  const dataRow = getTable(current.table)[current.row];
+  const src = dataRow.days[current.day];
+  const tpl = { status: src.status, start: src.start, end: src.end, renfortLabel: src.renfortLabel };
+  for(let i=0;i<7;i++){
+    dataRow.days[i] = { status: tpl.status, start: tpl.start, end: tpl.end, renfortLabel: tpl.renfortLabel };
+  }
+  renderAll();
+  closePopover();
+});
 backdrop.addEventListener('click', closePopover);
 
 /* ---------------- AUTO-DATES FROM WEEK NUMBER ---------------- */
@@ -1587,167 +1665,9 @@ async function exportExcel(hourOffset){
 document.getElementById('exportBtn').addEventListener('click', ()=>exportExcel(0));
 document.getElementById('exportFrBtn').addEventListener('click', ()=>exportExcel(1));
 
-/* ---------------- IMPORT ---------------- */
-function cellText(v){
-  if (v == null) return '';
-  if (typeof v === 'object'){
-    if ('richText' in v && Array.isArray(v.richText)) return v.richText.map(t=>t.text).join('');
-    if ('text' in v) return typeof v.text === 'string' ? v.text : cellText(v.text);
-    if ('result' in v) return String(v.result ?? '');
-    if ('formula' in v) return '';
-  }
-  return String(v);
-}
-function parseTimeCell(txt, hourOffset){
-  if (!txt) return null;
-  const s = String(txt).trim();
-  // format "H:MM" ou "HHhMM" ou "HHHMM" (ex 8H30) ou "8"
-  const m = s.match(/^(\d{1,2})\s*[:hH]\s*(\d{2})?$/) || s.match(/^(\d{1,2})$/);
-  if (!m) return null;
-  let h = parseInt(m[1], 10);
-  const mm = m[2] ? parseInt(m[2], 10) : 0;
-  h -= (hourOffset || 0); // reverse offset appliqué à l'export
-  if (h < 0) h += 24;
-  if (h > 23) h -= 24;
-  const total = h*60 + mm;
-  if (total < DAY_MIN || total > DAY_MAX) return minToTime(Math.max(DAY_MIN, Math.min(DAY_MAX, total)));
-  return minToTime(total);
-}
-const STATUS_LABEL_MAP = (()=>{
-  const m = {};
-  Object.entries(STATUS).forEach(([k,v])=>{ m[v.label.toUpperCase()] = k; });
-  m['TÉLÉTRAVAIL'] = 'teletravail'; m['TELETRAVAIL'] = 'teletravail';
-  m['CONGÉ'] = 'conge'; m['CONGE'] = 'conge';
-  m['MISSIONNÉE'] = 'mission'; m['MISSIONNEE'] = 'mission'; m['MISSION'] = 'mission';
-  return m;
-})();
-function parseDayCells(startTxt, endTxt, hourOffset){
-  const sU = (startTxt||'').toString().trim().toUpperCase();
-  const eU = (endTxt||'').toString().trim().toUpperCase();
-  if (STATUS_LABEL_MAP[sU]) return d(STATUS_LABEL_MAP[sU]);
-  if (STATUS_LABEL_MAP[eU]) return d(STATUS_LABEL_MAP[eU]);
-  const s = parseTimeCell(startTxt, hourOffset);
-  const e = parseTimeCell(endTxt, hourOffset);
-  if (s && e) return w(s, e);
-  return OFF;
-}
-
-async function importExcel(file){
-  try{
-    const buf = await file.arrayBuffer();
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buf);
-
-    // Detect hour offset from filename
-    const fname = (file.name||'').toLowerCase();
-    const hourOffset = fname.includes('_heurefr') ? 1 : 0;
-
-    // Map worksheet name -> project key via PROJECT_LABELS
-    const labelToKey = {};
-    Object.entries(PROJECT_LABELS).forEach(([k,v])=>{ labelToKey[v.substring(0,31).toLowerCase()] = k; });
-
-    let importedProjects = 0;
-    let firstWeekTxt = null;
-
-    wb.worksheets.forEach(ws=>{
-      const pk = labelToKey[(ws.name||'').toLowerCase()];
-      if (!pk) return; // ignore "Planning complet" et autres
-
-      const buckets = { zones:[], pause:[], managers:[] };
-      let currentSection = null;
-      let headerRow = null;
-
-      const detectSection = (txt)=>{
-        const t = (txt||'').toString().toUpperCase();
-        if (t.startsWith('PLANNING ZONES')) return 'zones';
-        if (t.startsWith('PLANNING PAUSE')) return 'pause';
-        if (t.startsWith('MANAGERS ET GF')) return 'managers';
-        if (t.startsWith('SYNTHÈSE') || t.startsWith('SYNTHESE')) return '__stop';
-        return null;
-      };
-
-      ws.eachRow({includeEmpty:false}, (row)=>{
-        const firstTxt = cellText(row.getCell(1).value).trim();
-        const sec = detectSection(firstTxt);
-        if (sec){
-          currentSection = sec === '__stop' ? null : sec;
-          headerRow = null;
-          return;
-        }
-        if (!currentSection) return;
-
-        // skip header rows: "Zone" or "Début"
-        if (/^zone$/i.test(firstTxt) || /^début$/i.test(firstTxt) || /^debut$/i.test(firstTxt)){
-          headerRow = true;
-          return;
-        }
-        // placeholder empty section
-        if (firstTxt === '—' || firstTxt === '-') return;
-        if (!headerRow) return;
-
-        const zone = firstTxt;
-        const nameFull = cellText(row.getCell(2).value).trim();
-        if (!zone && !nameFull) return;
-
-        const days = [];
-        for (let i=0;i<7;i++){
-          const sC = row.getCell(3 + i*2).value;
-          const eC = row.getCell(3 + i*2 + 1).value;
-          days.push(parseDayCells(cellText(sC), cellText(eC), hourOffset));
-        }
-        const hasExtra = currentSection !== 'pause';
-        const comment = hasExtra ? cellText(row.getCell(3 + 14 + 2).value).trim() : '';
-
-        // split role from name for managers section (e.g. "Manager NOM PRENOM" or "GF NOM PRENOM")
-        let role = '', name = nameFull;
-        if (currentSection === 'managers'){
-          const mm = nameFull.match(/^(Manager|GF|Responsable|Chef|Superviseur)\s+(.+)$/i);
-          if (mm){ role = mm[1]; name = mm[2]; }
-        }
-
-        buckets[currentSection].push({ zone, role, name, days, comment });
-      });
-
-      // Only overwrite if at least one row was parsed
-      if (buckets.zones.length + buckets.pause.length + buckets.managers.length > 0){
-        data[pk].zones = buckets.zones;
-        data[pk].pause = buckets.pause;
-        data[pk].managers = buckets.managers;
-        importedProjects++;
-      }
-    });
-
-    // Try to read week label from "Planning complet" first data row (col 1 = Semaine)
-    const wsC = wb.getWorksheet('Planning complet');
-    if (wsC){
-      const r2 = wsC.getRow(2);
-      const semaine = cellText(r2.getCell(1).value).trim();
-      if (semaine) firstWeekTxt = semaine;
-    }
-    if (firstWeekTxt){
-      document.getElementById('weekBadge').innerText = firstWeekTxt;
-    }
-
-    renderAll();
-    alert(`Import terminé — ${importedProjects} activité(s) chargée(s).`);
-  } catch(err){
-    console.error(err);
-    alert('Erreur pendant l\'import : ' + (err.message || err));
-  }
-}
-
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  document.getElementById('importFile').click();
-});
-document.getElementById('importFile').addEventListener('change', (e)=>{
-  const f = e.target.files && e.target.files[0];
-  if (f) importExcel(f);
-  e.target.value = '';
-});
 
 /* ---------------- INIT ---------------- */
 renderAll();
-
 </script>
 </body>
 </html>
